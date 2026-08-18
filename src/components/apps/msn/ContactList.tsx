@@ -6,6 +6,8 @@ import { openApp } from "@/stores/desktop-store";
 import { useNarrative } from "@/components/system/NarrativeProvider";
 import { playXpSound } from "@/lib/audio/synth";
 import { XpIcon } from "@/components/desktop/XpIcon";
+import type { ContactId } from "@/lib/director/types";
+import { useDesktopStore } from "@/stores/desktop-store";
 
 export function ContactList() {
   const { sendEvent, view } = useNarrative();
@@ -26,17 +28,29 @@ export function ContactList() {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [sendEvent, view]);
-  const online = view?.online !== false;
-  const sleeping = CONTACTS[0];
-  const openSleepless = () => {
-    openApp("msn-chat");
-    if (!view?.firstMessageSent) void sendEvent({ type: "MSN_OPENED" });
-    else if (view.temporarilyOffline && !view.completed)
-      void sendEvent({ type: "CHAT_REOPENED" });
+  const openContact = (contactId: ContactId) => {
+    const contact = CONTACTS.find((item) => item.id === contactId)!;
+    openApp("msn-chat", `${contact.name} - Conversation`, { contactId });
+    useDesktopStore.getState().updateWindow("msn-chat", {
+      title: `${contact.name} - Conversation`,
+      payload: { contactId },
+    });
+    if (view?.chapter === 2)
+      void sendEvent({ type: "CONTACT_OPENED", contactId });
+    else if (contactId === "sleepless_17") {
+      if (!view?.firstMessageSent) void sendEvent({ type: "MSN_OPENED" });
+      else if (view.temporarilyOffline && !view.completed)
+        void sendEvent({ type: "CHAT_REOPENED" });
+    }
   };
-  const offline = online
-    ? CONTACTS.filter((c) => c.status === "offline")
-    : CONTACTS;
+  const onlineContacts = CONTACTS.filter((contact) =>
+    view?.chapter === 2
+      ? view.contactStatuses[contact.id as ContactId] === "online"
+      : contact.id === "sleepless_17" && view?.online !== false,
+  );
+  const offline = CONTACTS.filter(
+    (contact) => !onlineContacts.includes(contact),
+  );
   return (
     <div className="msn-contact">
       <div className="msn-brand">
@@ -59,22 +73,34 @@ export function ContactList() {
           onClick={() => setOnlineOpen((value) => !value)}
           aria-expanded={onlineOpen}
         >
-          <span>{onlineOpen ? "▾" : "▸"}</span> Online ({online ? 1 : 0})
+          <span>{onlineOpen ? "▾" : "▸"}</span> Online ({onlineContacts.length})
         </button>
-        {onlineOpen && online && (
-          <button
-            className="contact online"
-            onDoubleClick={openSleepless}
-            data-testid="contact-sleepless"
-          >
-            <span className="presence">●</span>
-            <Image src={sleeping.avatar!} alt="" width={30} height={30} />
-            <span>
-              <b>{sleeping.name}</b>
-              <small> — {sleeping.line}</small>
-            </span>
-          </button>
-        )}
+        {onlineOpen &&
+          onlineContacts.map((contact) => (
+            <button
+              key={contact.id}
+              className="contact online"
+              onDoubleClick={() => openContact(contact.id as ContactId)}
+              onClick={() => openContact(contact.id as ContactId)}
+              data-testid={
+                contact.id === "sleepless_17"
+                  ? "contact-sleepless"
+                  : `contact-${contact.id}`
+              }
+              data-contact-id={contact.id}
+            >
+              <span className="presence">●</span>
+              {"avatar" in contact ? (
+                <Image src={contact.avatar} alt="" width={30} height={30} />
+              ) : (
+                <span className="blank-avatar">?</span>
+              )}
+              <span>
+                <b>{contact.name}</b>
+                <small> — {contact.line}</small>
+              </span>
+            </button>
+          ))}
         <button
           className="contact-group"
           onClick={() => setOfflineOpen((value) => !value)}
@@ -84,22 +110,32 @@ export function ContactList() {
         </button>
         {offlineOpen &&
           offline.map((c) => {
-            const content = <>
-              <span className="presence">○</span>
-              <span className="blank-avatar">?</span>
-              <span>
-                {c.name}
-                {c.id === "sleepless" && (
-                  <small> — Last seen: 10/18/2005</small>
-                )}
-              </span>
-            </>;
-            return c.id === "sleepless" ? (
-              <button key={c.id} className="contact offline" onDoubleClick={openSleepless} data-testid="contact-sleepless">
+            const content = (
+              <>
+                <span className="presence">○</span>
+                <span className="blank-avatar">?</span>
+                <span>
+                  {c.name}
+                  {c.id === "sleepless_17" && (
+                    <small> — Last seen: 10/18/2005</small>
+                  )}
+                </span>
+              </>
+            );
+            return c.id === "sleepless_17" && view?.chapter !== 2 ? (
+              <button
+                key={c.id}
+                className="contact offline"
+                onDoubleClick={() => openContact("sleepless_17")}
+                data-testid="contact-sleepless"
+                data-contact-id={c.id}
+              >
                 {content}
               </button>
             ) : (
-              <div key={c.id} className="contact offline">{content}</div>
+              <div key={c.id} className="contact offline">
+                {content}
+              </div>
             );
           })}
       </div>

@@ -14,7 +14,7 @@ export function Desktop(){
   const [power,setPower]=useState<'on'|'shutdown'|'restarting'>('on');
   const select=useDesktopStore(s=>s.selectIcon);
   const closeStart=useDesktopStore(s=>s.closeStart);
-  const {ready,sessionError,reset}=useNarrative();
+  const {ready,sessionError,reset,view}=useNarrative();
 
   const powerAction=(mode:'shutdown'|'restart')=>{
     playXpSound('shutdown');
@@ -24,7 +24,7 @@ export function Desktop(){
 
   return <main className="desktop-host" data-session-ready={ready ? "true" : "false"}>
     <div className="desktop-scale">
-      <div className="xp-desktop" onPointerDown={e=>{if(!audioUnlocked.current){audioUnlocked.current=true;playXpSound('startup')}if(e.target===e.currentTarget){select(null);closeStart();}}}>
+      <div className="xp-desktop" data-exposure={view?.exposureStage ?? 0} data-chapter-two={view?.chapter === 2 ? "true" : "false"} onPointerDown={e=>{if(!audioUnlocked.current){audioUnlocked.current=true;playXpSound('startup')}if(e.target===e.currentTarget){select(null);closeStart();}}}>
         {!ready&&<div className="boot-screen"><span className="xp-flag">▰</span><strong>Microsoft Windows xp</strong><div className="boot-meter"><i/><i/><i/></div></div>}
         {power!=='on'&&<div className="power-screen">
           {power==='shutdown'?<><div className="xp-logo-text">Microsoft Windows <b>xp</b></div><p>It is now safe to turn off your computer.</p><button onClick={()=>setPower('on')}>Turn on</button></>:<><div className="xp-logo-text">Microsoft Windows <b>xp</b></div><p>Windows is restarting…</p></>}

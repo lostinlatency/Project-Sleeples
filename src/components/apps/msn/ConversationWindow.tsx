@@ -5,6 +5,8 @@ import { useNarrative } from "@/components/system/NarrativeProvider";
 import { XpIcon } from "@/components/desktop/XpIcon";
 import { playXpSound } from "@/lib/audio/synth";
 import { useDesktopStore } from "@/stores/desktop-store";
+import { CONTACT_DISPLAY } from "@/content/server/chapter-two";
+import { CONTACTS } from "@/content/public/contacts";
 
 export function ConversationWindow() {
   const {
@@ -18,7 +20,7 @@ export function ConversationWindow() {
     sendEvent,
     acceptWebcam,
     declineWebcam,
-    openFile,
+    decideFileTransfer,
   } = useNarrative();
   const [nudgeReady, setNudgeReady] = useState(true);
   const [nudging, setNudging] = useState(false);
@@ -27,9 +29,13 @@ export function ConversationWindow() {
   const chatIsActive = useDesktopStore(
     (state) => state.activeWindowId === "msn-chat",
   );
+  const activeContact = view?.activeContact ?? "sleepless_17";
+  const contact = CONTACT_DISPLAY[activeContact];
+  const visibleMessages = messages.filter((message) => message.contactId === activeContact);
+  const avatar = CONTACTS.find((item) => item.id === activeContact);
   useEffect(() => {
     transcript.current?.scrollTo({ top: transcript.current.scrollHeight });
-  }, [messages, typing]);
+  }, [visibleMessages.length, typing]);
   useEffect(() => {
     if (
       !chatIsActive ||
@@ -72,8 +78,8 @@ export function ConversationWindow() {
       <div className="conversation-content">
         <section className="chat-column">
           <div className="recipient">
-            To: <b>sleepless_17</b>{" "}
-            <span>{view?.online ? "(Online)" : "(Offline)"}</span>
+            To: <b>{contact.name}</b>{" "}
+            <span>{view?.contactStatuses?.[activeContact] === "online" || (view?.chapter === 1 && view.online) ? "(Online)" : "(Offline)"}</span>
           </div>
           <div
             className="transcript"
@@ -82,9 +88,9 @@ export function ConversationWindow() {
             data-testid="transcript"
           >
             <p className="conversation-note">
-              You have started a conversation with sleepless_17.
+              You have started a conversation with {contact.name}.
             </p>
-            {messages.map((m) => (
+            {visibleMessages.map((m) => (
               <div
                 key={m.id}
                 className={
@@ -100,21 +106,18 @@ export function ConversationWindow() {
                 ) : (
                   <>
                     <b>
-                      {m.sender === "sleepless_17"
-                        ? "sleepless_17 says:"
-                        : "Daniel says:"}
+                      {m.sender !== "system" ? `${m.sender} says:` : "Daniel says:"}
                     </b>
                     <p>{m.text.replace(/^Daniel says:\n/, "")}</p>
                   </>
                 )}
               </div>
             ))}
-            {typing && <div className="typing">sleepless_17 is typing...</div>}
+            {typing && <div className="typing">{contact.name} is typing...</div>}
             {fileTransfer && (
               <FileTransfer
-                onOpen={() => {
-                  void openFile("webcam_still");
-                }}
+                description={view?.fileOfferDescription ?? ""}
+                onDecision={(decision) => void decideFileTransfer(decision)}
               />
             )}
           </div>
@@ -143,19 +146,19 @@ export function ConversationWindow() {
                 </button>
               ))
             ) : (
-              <p className="story-waiting">sleepless_17 is waiting…</p>
+              <p className="story-waiting">{view?.chapter === 2 && view.completedContacts.includes(activeContact) ? `${contact.name} is now offline.` : `${contact.name} is waiting…`}</p>
             )}
           </div>
           <div className="choice-foot">
-            <span>Choose a reply · unlocked files may reveal stronger answers</span>
+            <span>{view?.chapter === 2 ? "Choose carefully · opened evidence changes what you can confront" : "Choose a reply · unlocked files may reveal stronger answers"}</span>
             <button aria-label="Nudge" onClick={nudge} disabled={!nudgeReady}>⚡ Nudge</button>
           </div>
         </section>
         <aside className="display-pictures">
           <div className="picture-frame">
             <Image
-              src="/assets/avatars/sleepless_17.webp"
-              alt="sleepless_17 display picture"
+              src={(avatar && "avatar" in avatar && avatar.avatar) || "/assets/avatars/sleepless_17.webp"}
+              alt={`${contact.name} display picture`}
               fill
               sizes="112px"
               style={{ objectFit: "cover" }}
@@ -173,7 +176,7 @@ export function ConversationWindow() {
             <b>Video Conversation</b>
           </div>
           <p>
-            <strong>sleepless_17</strong> would like to start a video
+            <strong>{contact.name}</strong> would like to start a video
             conversation.
           </p>
           <div>
@@ -195,17 +198,22 @@ export function ConversationWindow() {
     </div>
   );
 }
-function FileTransfer({ onOpen }: { onOpen: () => void }) {
+function FileTransfer({ description, onDecision }: { description: string; onDecision: (decision: "accepted" | "declined" | "inspected") => void }) {
   return (
-    <div className="file-transfer">
+    <div className="file-transfer chapter-two-transfer" role="dialog" aria-label="Incoming file transfer">
       <span>
         <XpIcon name="image-file" size={30} />
       </span>
       <div>
-        <b>sleepless_17 wants to send you a file:</b>
-        <p>emily_webcam.jpg (184 KB)</p>
+        <b>sleepless_17 (Offline) wants to send you a file:</b>
+        <p>for_when_you_leave.scr (224 KB)</p>
+        <small>Modified: 10/18/2005 2:24 AM{description ? ` · ${description}` : ""}</small>
       </div>
-      <button onClick={onOpen}>Accept</button>
+      <div className="transfer-actions">
+        <button onClick={() => onDecision("accepted")}>Accept</button>
+        <button onClick={() => onDecision("declined")}>Decline</button>
+        <button onClick={() => onDecision("inspected")}>Details</button>
+      </div>
     </div>
   );
 }

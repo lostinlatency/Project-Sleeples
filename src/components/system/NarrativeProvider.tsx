@@ -21,6 +21,8 @@ import {
   saveSession,
   clearSession,
   isCurrentSavedSession,
+  normalizeSavedMessages,
+  normalizeSavedPublicView,
 } from "@/lib/narrative/client-persistence";
 import { typingDuration } from "@/lib/timing/delivery";
 import { openApp, useDesktopStore } from "@/stores/desktop-store";
@@ -56,6 +58,9 @@ interface NarrativeContextValue {
   openFile: (id: string) => Promise<OpenFile | null>;
   acceptWebcam: () => Promise<void>;
   declineWebcam: () => Promise<void>;
+  decideFileTransfer: (
+    decision: "accepted" | "declined" | "inspected",
+  ) => Promise<void>;
   reset: () => Promise<void>;
   toggleSound: () => void;
   setVolume: (volume: number) => void;
@@ -105,11 +110,13 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const saved = await loadSession();
       if (isCurrentSavedSession(saved)) {
+        const normalizedView = normalizeSavedPublicView(saved.publicView);
+        const normalizedMessages = normalizeSavedMessages(saved.messages);
         envelopeRef.current = saved.envelope;
-        viewRef.current = saved.publicView as PublicView;
-        messagesRef.current = saved.messages as DeliveredMessage[];
-        setView(saved.publicView as PublicView);
-        setMessages(saved.messages as DeliveredMessage[]);
+        viewRef.current = normalizedView;
+        messagesRef.current = normalizedMessages;
+        setView(normalizedView);
+        setMessages(normalizedMessages);
         setReady(true);
         return;
       }
@@ -201,7 +208,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
     async (items: DeliveredMessage[]) => {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.sender === "sleepless_17") {
+        if (item.sender !== "system") {
           setTyping(true);
           await new Promise((r) =>
             setTimeout(
@@ -212,7 +219,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           setTyping(false);
         }
         append([item]);
-        if (item.sender === "sleepless_17") beep();
+        if (item.sender !== "system") beep();
         await new Promise((r) => setTimeout(r, 220));
       }
     },
@@ -245,6 +252,9 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           applyActions(data.uiActions || []);
           pending = null;
           if (data.webcamPreparation) {
+            completionLock.current = false;
+            webcamLock.current = false;
+            setReactorStart(false);
             setWebcamScript(data.webcamPreparation.spokenScript);
             const tokenResponse = await fetch("/api/reactor/token", {
               method: "POST",
@@ -272,6 +282,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
             {
               id: `connection-${Date.now()}`,
               sender: "system",
+              contactId: viewRef.current?.activeContact ?? "sleepless_17",
               text: "The following message could not be delivered.",
               delivery: "direct",
             },
@@ -294,7 +305,16 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const chooseReply = useCallback(
     async (choiceId: string) => {
       if (busy || viewRef.current?.completed) return;
-      await sendEvent({ type: "STORY_CHOICE", choiceId });
+      const current = viewRef.current;
+      if (current?.chapter === 2) {
+        if (choiceId.startsWith("final-")) {
+          await sendEvent({
+            type: "CHAPTER_TWO_FINAL_DECISION",
+            decision: choiceId.replace("final-", "") as
+              "quarantine" | "release" | "erase",
+          });
+        } else await sendEvent({ type: "CONTACT_CHOICE", choiceId });
+      } else await sendEvent({ type: "STORY_CHOICE", choiceId });
     },
     [busy, sendEvent],
   );
@@ -338,11 +358,19 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
     setInvite(false);
     setWebcamPlaying(true);
     await sendEvent({ type: "WEBCAM_ACCEPTED" });
-    openApp("msn-video");
+    openApp(
+      "msn-video",
+      `Video Conversation — ${viewRef.current?.activeContact ?? "sleepless_17"}`,
+    );
+    useDesktopStore.getState().updateWindow("msn-video", {
+      title: `Video Conversation — ${viewRef.current?.activeContact ?? "sleepless_17"}`,
+    });
     if (reactorMode === "live") setReactorStart(true);
     else
       setTimeout(() => {
-        void sendEvent({ type: "LTX_COMPLETED" });
+        void sendEvent({ type: "LTX_COMPLETED" }).finally(() => {
+          webcamLock.current = false;
+        });
         setTimeout(() => {
           setWebcamPlaying(false);
           useDesktopStore.getState().closeWindow("msn-video");
@@ -358,6 +386,13 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
     await sendEvent({ type: "WEBCAM_DECLINED" });
     webcamLock.current = false;
   }, [sendEvent]);
+  const decideFileTransfer = useCallback(
+    async (decision: "accepted" | "declined" | "inspected") => {
+      setFileTransfer(false);
+      await sendEvent({ type: "FILE_TRANSFER_DECIDED", decision });
+    },
+    [sendEvent],
+  );
   const reset = useCallback(async () => {
     await clearSession();
     location.reload();
@@ -375,7 +410,11 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       busy,
       sessionError,
       invite,
-      fileTransfer,
+      fileTransfer:
+        fileTransfer ||
+        (view?.chapter === 2 &&
+          view.chapterTwoStage === "file_offer" &&
+          view.fileTransferDecision === "pending"),
       webcamPlaying,
       webcamScript,
       webcamStream,
@@ -386,6 +425,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       openFile,
       acceptWebcam,
       declineWebcam,
+      decideFileTransfer,
       reset,
       toggleSound: () => setSound((s) => !s),
       setVolume,
@@ -395,6 +435,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       busy,
       chooseReply,
       declineWebcam,
+      decideFileTransfer,
       fileTransfer,
       invite,
       messages,
@@ -418,13 +459,25 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       {children}
       {reactorToken && webcamScript && (
         <LtxBridge
+          key={`${view?.activeContact ?? "sleepless_17"}-${webcamScript}`}
           token={reactorToken}
           script={webcamScript}
+          avatarPath={
+            view?.activeContact === "mike_sk8"
+              ? "/assets/avatars/mike_sk8.svg"
+              : view?.activeContact === "sarahlou_x"
+                ? "/assets/avatars/sarahlou_x.svg"
+                : view?.activeContact === "tom_d"
+                  ? "/assets/avatars/tom_d.svg"
+                  : "/assets/avatars/sleepless_17.webp"
+          }
           startRequested={reactorStart}
           onReady={() => void sendEvent({ type: "LTX_CONDITIONS_READY" })}
           onComplete={() => {
             if (completionLock.current) return;
             completionLock.current = true;
+            webcamLock.current = false;
+            setReactorStart(false);
             setReactorToken(null);
             setWebcamPlaying(false);
             useDesktopStore.getState().closeWindow("msn-video");
@@ -433,6 +486,8 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           onFailure={(reason) => {
             if (completionLock.current) return;
             completionLock.current = true;
+            webcamLock.current = false;
+            setReactorStart(false);
             setReactorToken(null);
             setWebcamPlaying(false);
             useDesktopStore.getState().closeWindow("msn-video");

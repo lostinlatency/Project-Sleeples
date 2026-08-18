@@ -24,6 +24,8 @@ interface Props {
   onComplete: () => void;
   onFailure: (reason: string) => void;
   onStream: (stream: MediaStream | null) => void;
+  avatarPath?: string;
+  performancePrompt?: string;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -45,6 +47,8 @@ function Controller({
   onComplete,
   onFailure,
   onStream,
+  avatarPath = "/assets/avatars/sleepless_17.webp",
+  performancePrompt = FIXED_PERFORMANCE_PROMPT,
 }: Props) {
   const { status, sessionId, connect, uploadFile, sendCommand } = useLtx2();
   const connectionAttempted = useRef(false);
@@ -128,13 +132,13 @@ function Controller({
     prepared.current = true;
     void (async () => {
       try {
-        const blob = await fetch("/assets/avatars/sleepless_17.webp").then(
+        const blob = await fetch(avatarPath).then(
           (response) => response.blob(),
         );
         const ref = await uploadFile(blob);
         await Promise.all([
           sendCommand("set_avatar_image", { avatar_image: ref }),
-          sendCommand("set_prompt", { prompt: FIXED_PERFORMANCE_PROMPT }),
+          sendCommand("set_prompt", { prompt: performancePrompt }),
           sendCommand("set_script", { script }),
           sendCommand("set_seed", { seed: FIXED_CHARACTER_SEED }),
           sendCommand("set_wpm", { wpm: CHARACTER_WPM }),
@@ -144,7 +148,7 @@ function Controller({
         failOnce(error instanceof Error ? error.message : "setup");
       }
     })();
-  }, [failOnce, script, sendCommand, status, uploadFile]);
+  }, [avatarPath, failOnce, performancePrompt, script, sendCommand, status, uploadFile]);
 
   useLtx2StateUpdate((message) => {
     if (message.finished && started.current) {

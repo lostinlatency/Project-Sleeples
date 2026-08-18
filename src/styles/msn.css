@@ -425,6 +425,14 @@
   margin: 3px 0;
   color: #555;
 }
+.file-transfer small { display:block; color:#6b7480; line-height:1.35; }
+.chapter-two-transfer { align-items:flex-start; }
+.chapter-two-transfer .transfer-actions { flex:0 0 auto; display:grid; gap:4px; }
+.chapter-two-transfer .transfer-actions button { width:72px; }
+@media (prefers-reduced-motion: reduce) {
+  .video-stage > img, .video-stage:after, .mock-clue, .mock-clue * { animation: none; }
+  .nudge-shake { animation: none !important; }
+}
 .video-conversation {
   height: 100%;
   min-height: 0;
@@ -492,6 +500,18 @@
   height: 100%;
   object-fit: cover;
 }
+.mock-clue { position: absolute; z-index: 3; pointer-events: none; }
+.mock-cd { right: 12%; bottom: 15%; width: 168px; height: 168px; border-radius: 50%; background: radial-gradient(circle at 46% 43%, #fafafa 0 12%, #bec7d2 13% 17%, #f7f7f5 18% 62%, #aeb8c5 63% 66%, #e9eef2 67%); box-shadow: 0 8px 18px #0008; transform: rotate(-8deg); }
+.mock-cd span, .mock-cd b { position: absolute; inset: 68px 12px auto; color: #24435f; font: 700 15px "Comic Sans MS", cursive; text-align: center; }
+.mock-cd b { opacity: 0; color: #8b1f2a; animation: cdLabelChange 6.5s steps(1, end) forwards; }
+.mock-cd span { animation: cdLabelHide 6.5s steps(1, end) forwards; }
+.mock-chair { right: 7%; bottom: 0; width: 28%; height: 48%; opacity: 0; border: 9px solid #302921; border-bottom: 0; background: linear-gradient(90deg, transparent 10%, #29231e 11% 18%, transparent 19% 81%, #29231e 82% 89%, transparent 90%); animation: chairFlicker 6.5s steps(1, end) forwards; }
+.mock-case { right: 8%; bottom: 10%; width: 120px; height: 210px; border: 3px solid #222; background: linear-gradient(90deg, #34373a, #151719 70%); box-shadow: 0 8px 20px #000b; }
+.mock-case i { position: absolute; right: 16px; top: 28px; width: 9px; height: 9px; border-radius: 50%; background: #6fe36f; box-shadow: 0 0 10px #62ff62; animation: caseAnswer 3.2s steps(1, end) infinite; }
+@keyframes cdLabelChange { 0%, 57% { opacity: 0; } 58%, 69% { opacity: 1; } 70%, 100% { opacity: 0; } }
+@keyframes cdLabelHide { 0%, 57% { opacity: 1; } 58%, 69% { opacity: 0; } 70%, 100% { opacity: 1; } }
+@keyframes chairFlicker { 0%, 63% { opacity: 0; } 64%, 67% { opacity: .82; } 68%, 100% { opacity: 0; } }
+@keyframes caseAnswer { 0%, 9%, 24%, 39%, 49%, 69%, 100% { opacity: .18; } 10%, 23%, 40%, 48%, 70%, 82% { opacity: 1; } }
 .local-camera {
   position: absolute;
   inset-inline-end: 14px;

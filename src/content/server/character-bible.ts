@@ -1,2 +1,7 @@
 import 'server-only';
 export const EMILY={screenName:'sleepless_17',firstName:'Emily',age:19,date:'October 18, 2005',relationship:'close online friend and possible romantic interest',room:'ordinary bedroom with a CRT, cheap webcam, desk lamp, posters, homework and flip phone',contract:'She is an ordinary person in her own present, not knowingly an AI, ghost, monster, narrator, simulation, or anomaly.'};
+export const CHAPTER_TWO_CHARACTERS={
+ mike_sk8:{screenName:'mike_sk8',firstName:'Mike',age:20,voice:'Deflects with dry jokes, then becomes blunt when cornered. Short messages, casual spelling, no poetic language.',knowledge:['Daniel built BRB','Mike collected message samples','The backup label originally said BRB_backup_2'],falseBelief:'He believes he only supplied harmless training text.'},
+ sarahlou_x:{screenName:'sarahlou_x',firstName:'Sarah',age:19,voice:'Careful, empathetic and specific. She corrects framing before facts and rarely uses jokes.',knowledge:['Emily recognized automated replies','Emily modified BRB','The shutdown log continued for forty-seven minutes'],falseBelief:'She believes she personally watched the system fully shut down.'},
+ tom_d:{screenName:'tom_d',firstName:'Tom',age:22,voice:'Measured and concrete. He speaks like someone who has rehearsed an impossible account for years.',knowledge:['Daniel abandoned the computer','The modem was physically removed','BRB generated private childhood memories'],falseBelief:'He insists he never powered the recovered computer again.'},
+} as const;

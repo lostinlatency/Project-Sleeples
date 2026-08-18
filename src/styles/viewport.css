@@ -2,6 +2,10 @@
 .mobile-advisory{display:none!important}
 .xp-desktop{width:100%;height:100%;background:#3a78b5 url('/assets/images/windows-xp-bliss.jpg') center center/cover no-repeat}
 .xp-desktop::before,.xp-desktop::after{display:none}
+.xp-desktop[data-chapter-two="true"]::after{display:block;content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent 0 49.8%,rgba(145,190,225,.055) 50%,transparent 50.2%);opacity:0}
+.xp-desktop[data-exposure="3"]::after{opacity:.45}
+.xp-desktop[data-exposure="4"]::after{opacity:.7;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(10,32,55,.035) 4px)}
+.xp-desktop[data-exposure="5"]::after{opacity:.85;background:radial-gradient(circle at 8% 42%,rgba(227,240,255,.12),transparent 22%),repeating-linear-gradient(0deg,transparent 0 3px,rgba(10,32,55,.045) 4px)}
 .xp-icon-recycle{display:grid;place-items:center}
 .xp-icon-recycle::before{position:static;display:block;width:42px;height:42px;font-size:37px;line-height:42px;text-align:center;transform:translateX(1px)}
 .start-button{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 13px 1px 7px;line-height:30px}

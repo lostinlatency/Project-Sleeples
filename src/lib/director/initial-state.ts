@@ -6,7 +6,8 @@ export function createInitialState(
   sessionId: string = randomUUID(),
 ): NarrativeState {
   const state: NarrativeState = {
-    version: 1,
+    version: 2,
+    chapter: 1,
     sessionId,
     turn: 0,
     phase: "normal",
@@ -51,6 +52,28 @@ export function createInitialState(
     processedKeys: [],
     msnOpened: false,
     firstMessageSent: false,
+    chapterTwo: {
+      stage: "locked",
+      chapterOneOutcome: "undecided",
+      activeContact: "sleepless_17",
+      fileTransferDecision: "pending",
+      exposureStage: 0,
+      knownEvidence: [],
+      completedContacts: [],
+      contactTrust: {
+        sleepless_17: 0,
+        mike_sk8: 0,
+        sarahlou_x: 0,
+        tom_d: 0,
+      },
+      contactThreads: {
+        sleepless_17: { nodeId: "c2-emily0", visited: [], choices: [], opened: false, completed: false },
+        mike_sk8: { nodeId: "mike0", visited: [], choices: [], opened: false, completed: false },
+        sarahlou_x: { nodeId: "sarah0", visited: [], choices: [], opened: false, completed: false },
+        tom_d: { nodeId: "tom0", visited: [], choices: [], opened: false, completed: false },
+      },
+      finalDecision: null,
+    },
   };
   state.story.choices = choicesFor(state);
   return state;
