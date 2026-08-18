@@ -1,0 +1,2 @@
+import 'server-only';
+export const WORLD_2005={date:'October 18, 2005',ordinary:['MSN Messenger 7','Windows XP','Winamp','LimeWire','CRT monitors','cheap USB webcams','flip phones','SMS','Google','Yahoo','Ask Jeeves'],musicAndFilm:'Only titles and artists released by October 18, 2005 may be mentioned. Never quote lyrics.',unknown:['Twitter','Instagram','TikTok','iPhone','Netflix streaming','Discord','Snapchat','COVID-19','Windows Vista release']};

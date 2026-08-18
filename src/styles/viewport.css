@@ -1,0 +1,19 @@
+.desktop-scale{inset:0;width:100%;height:100%;transform:none;transform-origin:initial}
+.mobile-advisory{display:none!important}
+.xp-desktop{width:100%;height:100%;background:#3a78b5 url('/assets/images/windows-xp-bliss.jpg') center center/cover no-repeat}
+.xp-desktop::before,.xp-desktop::after{display:none}
+.xp-icon-recycle{display:grid;place-items:center}
+.xp-icon-recycle::before{position:static;display:block;width:42px;height:42px;font-size:37px;line-height:42px;text-align:center;transform:translateX(1px)}
+.start-button{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 13px 1px 7px;line-height:30px}
+.windows-mark{display:grid;flex:0 0 auto;margin:0;transform:skewY(-7deg) translateY(-1px)}
+.xp-svg-icon{display:block;object-fit:contain;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42))}
+.desktop-icon>.xp-svg-icon{width:48px;height:48px}
+.task-buttons .task-icon{display:inline-block;width:16px;height:16px;margin-inline-end:5px;vertical-align:-4px;background:none;filter:drop-shadow(1px 1px 1px rgba(0,0,0,.35))}
+.xp-titlebar>.title-app-icon{width:16px;height:16px;flex:0 0 16px;margin-inline-end:4px;background:none;border:0;filter:drop-shadow(1px 1px 1px rgba(0,0,0,.35))}
+.start-item>.small-icon{width:32px;height:32px;flex:0 0 32px;background:none;border:0;box-shadow:none}
+.explorer-toolbar button{display:flex;align-items:center;gap:3px}
+.explorer-toolbar .xp-svg-icon{flex:0 0 auto}
+.address div{display:flex;align-items:center;gap:4px}
+.file-item>.file-icon{width:42px;height:42px;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.3))}
+.file-grid.details .file-item>.file-icon{width:22px;height:22px;transform:none}
+@media(max-width:700px){.desktop-icons{gap:3px}.desktop-icon{width:78px;min-height:72px}.start-menu{width:min(385px,100vw)}}

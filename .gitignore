@@ -1,0 +1,12 @@
+node_modules
+.DS_Store
+.next
+.env.local
+playwright-report
+test-results
+coverage
+.playwright-cli
+*.tsbuildinfo
+captures/
+reactor-ltx2-error.html
+reactor-ltx2-error.png

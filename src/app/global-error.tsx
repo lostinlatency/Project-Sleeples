@@ -1,0 +1,1 @@
+'use client';export default function GlobalError({reset}:{error:Error&{digest?:string};reset:()=>void}){return <html><body><div className="fatal-xp"><div><h2>System Error</h2><p>The recovered computer could not be started.</p><button onClick={reset}>Restart</button></div></div></body></html>}

@@ -1,0 +1,3 @@
+import {createInitialState} from '@/lib/director/initial-state';import {publicView} from '@/lib/director/types';import {sealState} from '@/lib/narrative/session-envelope';import {validateServerEnvironment} from '@/lib/validation/env';
+export const runtime='nodejs';
+export async function POST(){const env=validateServerEnvironment();if(!env.ok)return Response.json({error:{code:'LIVE_MODE_NOT_CONFIGURED',message:'Server configuration is incomplete.'}},{status:503});const state=createInitialState();return Response.json({sessionEnvelope:await sealState(state),publicView:publicView(state),uiActions:[]});}

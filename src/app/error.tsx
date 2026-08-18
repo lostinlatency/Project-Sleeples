@@ -1,0 +1,1 @@
+'use client';export default function ErrorPage({reset}:{error:Error&{digest?:string};reset:()=>void}){return <div className="fatal-xp"><div><h2>Project Sleepless</h2><p>Windows could not recover the desktop session.</p><button onClick={reset}>Try Again</button></div></div>}

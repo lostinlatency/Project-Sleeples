@@ -1,0 +1,6 @@
+.system-tray{position:relative}
+.volume-control{position:absolute;right:53px;bottom:29px;width:118px;padding:7px;background:#ece9d8;border:2px outset #fff;box-shadow:2px 2px 5px rgba(0,0,0,.45);color:#111;text-align:center}
+.volume-control strong{display:block;margin-bottom:5px;font-size:11px}
+.volume-control input[type=range]{width:98px;accent-color:#0a58c7}
+.volume-control label{display:block;margin-top:5px;border-top:1px solid #aaa;padding-top:4px;text-align:left}
+.volume-control label input{vertical-align:-2px}
