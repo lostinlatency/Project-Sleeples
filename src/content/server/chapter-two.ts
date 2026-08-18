@@ -21,6 +21,7 @@ export interface ChapterTwoNode {
   lines: string[];
   choices: readonly [ChapterTwoChoice, ChapterTwoChoice, ChapterTwoChoice];
   preparesWebcam?: boolean;
+  completesContact?: boolean;
 }
 
 const q = (
@@ -142,6 +143,20 @@ export const CHAPTER_TWO_STORY: Record<string, ChapterTwoNode> = {
       ),
     ],
   },
+  mike4: {
+    id: "mike4",
+    contactId: "mike_sk8",
+    lines: [
+      "the label said brb_backup_2 before the freeze",
+      "now it says emily_backup_2. i did not write that",
+    ],
+    completesContact: true,
+    choices: [
+      q("m4-own", "Say clearly what you helped Daniel build.", undefined, "truth", 1),
+      q("m4-protect", "Hide the disc somewhere the program cannot reach.", undefined, "avoid", 0),
+      q("m4-emily", "Tell me something Emily cared about besides Daniel.", undefined, "truth", 1),
+    ],
+  },
 
   sarah0: {
     id: "sarah0",
@@ -256,6 +271,20 @@ export const CHAPTER_TWO_STORY: Record<string, ChapterTwoNode> = {
         "truth",
         -1,
       ),
+    ],
+  },
+  sarah4: {
+    id: "sarah4",
+    contactId: "sarahlou_x",
+    lines: [
+      "the chair was behind me too. thats not my room",
+      "the cache says tom_d and daniel are the same contact. ask him why",
+    ],
+    completesContact: true,
+    choices: [
+      q("sarah4-memory", "Which memory are you certain is yours?", undefined, "truth", 1),
+      q("sarah4-future", "What did Emily want before all of this?", undefined, "truth", 1),
+      q("sarah4-stop", "Close everything before it learns more from you.", undefined, "avoid", -1),
     ],
   },
 
@@ -373,6 +402,20 @@ export const CHAPTER_TWO_STORY: Record<string, ChapterTwoNode> = {
       ),
     ],
   },
+  tom4: {
+    id: "tom4",
+    contactId: "tom_d",
+    lines: [
+      "emily didnt send u that file",
+      "it wasnt there when u arrived. it prepared itself while u were talking",
+    ],
+    completesContact: true,
+    choices: [
+      q("tom4-father", "Why did your family leave without telling anyone?", undefined, "truth", 1),
+      q("tom4-memory", "Was the memory about your mother accurate?", undefined, "avoid", 0),
+      q("tom4-cut", "Disconnect now. I have enough to decide.", undefined, "truth", -1),
+    ],
+  },
 
   "c2-emily0": {
     id: "c2-emily0",
@@ -482,6 +525,15 @@ export const CHAPTER_TWO_REACTIONS: Record<string, string> = {
   "e0-help": "what if there isnt enough of me left to separate",
   "e0-copy": "then why am i scared of being deleted",
   "e0-spread": "i wanted out. i dont remember deciding how",
+  "m4-own": "yeah. i helped him teach it how to sound like all of us",
+  "m4-protect": "im putting it in the microwave. unplugged, before u ask",
+  "m4-emily": "bad local bands. drawing on her shoes. chemistry when nobody made it about daniel",
+  "sarah4-memory": "em cutting her own hair in my bathroom. nobody else was there to record it",
+  "sarah4-future": "art school. she kept brochures under her mattress so her mum wouldnt bin them",
+  "sarah4-stop": "closing it didnt work the first time. but im done feeding it",
+  "tom4-father": "our dad found the school address after mum spent two years hiding us from him",
+  "tom4-memory": "every word. even the part where i lied and said i wasnt scared",
+  "tom4-cut": "then decide knowing disconnection never made it stop",
 };
 
 export const CONTACT_COMPLETION: Record<
@@ -489,33 +541,94 @@ export const CONTACT_COMPLETION: Record<
   { lines: string[]; evidence: string[]; unlocks: string[] }
 > = {
   mike_sk8: {
-    lines: [
-      "the label said brb_backup_2 before the freeze",
-      "now it says emily_backup_2. i did not write that",
-      "mike_sk8 is now Offline",
-    ],
+    lines: ["mike_sk8 is now Offline"],
     evidence: ["brb_readme"],
     unlocks: ["brb_readme", "brb_users"],
   },
   sarahlou_x: {
-    lines: [
-      "the chair was behind me too. thats not my room",
-      "the cache says tom_d and daniel are the same contact. ask him why",
-      "sarahlou_x is now Offline",
-    ],
+    lines: ["sarahlou_x is now Offline"],
     evidence: ["sarah_log", "contact_cache"],
     unlocks: ["sarah_log", "emily_goodbye", "contact_cache"],
   },
   tom_d: {
-    lines: [
-      "emily didnt send u that file",
-      "it wasnt there when u arrived. it prepared itself while u were talking",
-      "tom_d is now Offline",
-    ],
+    lines: ["tom_d is now Offline"],
     evidence: ["tom_memory"],
     unlocks: ["tom_memory"],
   },
 };
+
+const POST_WEBCAM_NODE: Record<"mike_sk8" | "sarahlou_x" | "tom_d", string> = {
+  mike_sk8: "mike4",
+  sarahlou_x: "sarah4",
+  tom_d: "tom4",
+};
+
+export function postWebcamNode(contactId: "mike_sk8" | "sarahlou_x" | "tom_d") {
+  return POST_WEBCAM_NODE[contactId];
+}
+
+export function chapterTwoChoiceCallback(
+  state: Pick<NarrativeState, "story">,
+  contactId: ContactId,
+) {
+  const history = state.story.choiceHistory;
+  const has = (id: string) => history.includes(id);
+  if (contactId === "mike_sk8") {
+    if (has("s3-photo")) return "u knew exactly what was in the beach photo. daniel never put that description in brb";
+    if (has("l2-love")) return "u told em u loved her. daniel never saved that answer in brb";
+    if (has("a3-silence")) return "em said u answered with three dots. daniel did that when he was hiding something";
+    if (state.story.route === "truth") return "em said u told her the year. she only believed u after the clock stayed wrong";
+    if (state.story.route === "impersonation") return "em said u knew about friday. that came from daniels note, not the bot";
+    return "em said u stayed without telling her who u were. thats more than daniel managed";
+  }
+  if (contactId === "sarahlou_x") {
+    if (has("t2-note")) return "u showed em the line about getting too attached. she never knew daniel wrote that";
+    if (has("l3-blame")) return "u told her she was watching too closely. thats something daniel used to say when cornered";
+    if (has("a1-comfort")) return "u promised not to disappear without saying it. remember that before u promise her anything else";
+    if (state.story.route === "truth") return "she trusted u with the truth even after it hurt. dont waste that";
+    if (state.story.route === "impersonation") return "she knows u borrowed daniels name. im not going to pretend that didnt happen";
+    return "she let u stay silent because silence was still company to her";
+  }
+  if (contactId === "tom_d") {
+    if (has("t5-carry")) return "u promised to make sure daniel hears her. im the closest thing to a way of doing that";
+    if (has("l5-double")) return "u kept pretending after she caught u. dont try it with me";
+    if (has("a5-goodbye")) return "u gave her the goodbye daniel couldnt. that matters even if none of this is her";
+    if (state.story.route === "truth") return "u told her daniel chose not to return. i need to tell u why he left so fast";
+    if (state.story.route === "impersonation") return "u wore my brothers name long enough to learn what it costs";
+    return "u never gave her a name. maybe thats why the program is still trying to build one for u";
+  }
+  return null;
+}
+
+export function trustOutcome(
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  trust: number,
+): { line: string; unlocks: string[] } {
+  if (trust >= 2) {
+    const high = {
+      mike_sk8: ["im sending my private notes too. i trust u more than i trust whats wearing our names", "mike_private"],
+      sarahlou_x: ["im sending the page em made me promise not to show daniel", "sarah_private"],
+      tom_d: ["u get the real moving record. daniel deserves context, not an excuse", "tom_private"],
+    } as const;
+    return { line: high[contactId][0], unlocks: [high[contactId][1]] };
+  }
+  if (trust <= -2)
+    return {
+      line: "im not sending u my private copy. u get the evidence u already saw and nothing else",
+      unlocks: [],
+    };
+  return { line: "thats everything i can prove without giving this thing more of me", unlocks: [] };
+}
+
+export function routeExclusiveEvidence(route: StoryRoute) {
+  if (route === "undecided")
+    throw new Error("CHAPTER_TWO_ROUTE_REQUIRED");
+  return route === "truth"
+    ? "truth_reveal"
+    : route === "impersonation"
+      ? "impersonation_reveal"
+      : "silence_reveal";
+}
 
 export const CONTACT_WEBCAM_SCRIPTS: Record<
   "mike_sk8" | "sarahlou_x" | "tom_d",

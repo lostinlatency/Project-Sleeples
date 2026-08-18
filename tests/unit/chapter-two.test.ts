@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHAPTER_TWO_REACTIONS,
   CHAPTER_TWO_STORY,
+  chapterTwoChoiceCallback,
 } from "@/content/server/chapter-two";
 import { createInitialState } from "@/lib/director/initial-state";
 import { reduceNarrative } from "@/lib/director/reducer";
@@ -54,11 +55,20 @@ function finishWitness(
   if (state.phase !== "webcam_preparing")
     throw new Error(`No webcam for ${contactId}`);
   if (outcome === "failure")
-    return event(state, { type: "LTX_FAILED", reason: "test transport" });
-  state = event(state, { type: "LTX_CONDITIONS_READY" });
-  if (outcome === "decline") return event(state, { type: "WEBCAM_DECLINED" });
-  state = event(state, { type: "WEBCAM_ACCEPTED" });
-  return event(state, { type: "LTX_COMPLETED" });
+    state = event(state, { type: "LTX_FAILED", reason: "test transport" });
+  else {
+    state = event(state, { type: "LTX_CONDITIONS_READY" });
+    if (outcome === "decline") state = event(state, { type: "WEBCAM_DECLINED" });
+    else {
+      state = event(state, { type: "WEBCAM_ACCEPTED" });
+      state = event(state, { type: "LTX_COMPLETED" });
+    }
+  }
+  const postChoice = state.chapterTwo.contactThreads[contactId].choices.find(
+    (item) => !item.disabled,
+  );
+  if (!postChoice) throw new Error(`No post-webcam choice for ${contactId}`);
+  return event(state, { type: "CONTACT_CHOICE", choiceId: postChoice.id });
 }
 
 function reachFinal(
@@ -87,6 +97,30 @@ function reachFinal(
 }
 
 describe("chapter two story graph", () => {
+  it("uses the corrected one-way webcam premise", () => {
+    expect(CHAPTER_TWO_STORY["c2-emily0"].lines).toBeDefined();
+    expect(CHAPTER_TWO_STORY.mike4.lines).toContain(
+      "the label said brb_backup_2 before the freeze",
+    );
+    expect(CHAPTER_TWO_STORY.mike3.lines.join(" ")).not.toContain(
+      "see your camera",
+    );
+  });
+
+  it("calls back specific Chapter One choices instead of only the route", () => {
+    const state = chapterTwo("impersonation");
+    state.story.choiceHistory = ["l2-love", "l3-blame", "l5-double"];
+    expect(chapterTwoChoiceCallback(state, "mike_sk8")).toContain(
+      "told em u loved her",
+    );
+    expect(chapterTwoChoiceCallback(state, "sarahlou_x")).toContain(
+      "watching too closely",
+    );
+    expect(chapterTwoChoiceCallback(state, "tom_d")).toContain(
+      "kept pretending",
+    );
+  });
+
   it("does not let an offline witness bypass the file-transfer decision", () => {
     const state = chapterTwo();
     const attempted = event(state, {
@@ -169,6 +203,63 @@ describe("chapter two story graph", () => {
       contactId: "sleepless_17",
     });
     expect(state.chapterTwo.activeContact).toBe("sleepless_17");
+  });
+
+  it("requires a meaningful reply after a webcam before a witness leaves", () => {
+    let state = event(chapterTwo(), {
+      type: "FILE_TRANSFER_DECIDED",
+      decision: "accepted",
+    });
+    state = event(state, { type: "CONTACT_OPENED", contactId: "mike_sk8" });
+    for (const choiceId of ["m0-calm", "m1-tech", "m2-list", "m3-accept"])
+      state = event(state, { type: "CONTACT_CHOICE", choiceId });
+    state = event(state, { type: "LTX_CONDITIONS_READY" });
+    state = event(state, { type: "WEBCAM_ACCEPTED" });
+    state = event(state, { type: "LTX_COMPLETED" });
+    expect(state.chapterTwo.completedContacts).not.toContain("mike_sk8");
+    expect(state.chapterTwo.contactThreads.mike_sk8.nodeId).toBe("mike4");
+    expect(state.chapterTwo.contactThreads.mike_sk8.choices).toHaveLength(3);
+    state = event(state, { type: "CONTACT_CHOICE", choiceId: "m4-emily" });
+    expect(state.chapterTwo.completedContacts).toContain("mike_sk8");
+  });
+
+  it("turns trust into optional evidence sharing or refusal", () => {
+    let trusted = event(chapterTwo(), {
+      type: "FILE_TRANSFER_DECIDED",
+      decision: "accepted",
+    });
+    trusted = event(trusted, { type: "CONTACT_OPENED", contactId: "mike_sk8" });
+    for (const choiceId of ["m0-calm", "m1-tech", "m2-list", "m3-accept"])
+      trusted = event(trusted, { type: "CONTACT_CHOICE", choiceId });
+    trusted = event(trusted, { type: "LTX_FAILED", reason: "test" });
+    expect(trusted.unlockedFiles).toContain("mike_private");
+
+    let hostile = event(chapterTwo(), {
+      type: "FILE_TRANSFER_DECIDED",
+      decision: "accepted",
+    });
+    hostile = event(hostile, { type: "CONTACT_OPENED", contactId: "mike_sk8" });
+    for (const choiceId of ["m0-accuse", "m1-purpose", "m2-believe", "m3-pressure"])
+      hostile = event(hostile, { type: "CONTACT_CHOICE", choiceId });
+    hostile = event(hostile, { type: "LTX_FAILED", reason: "test" });
+    expect(hostile.unlockedFiles).not.toContain("mike_private");
+    expect(hostile.recentMessages.at(-1)?.text).toContain(
+      "not sending u my private copy",
+    );
+  });
+
+  it.each([
+    ["truth", "truth_reveal"],
+    ["impersonation", "impersonation_reveal"],
+    ["silence", "silence_reveal"],
+  ] as const)("unlocks only the %s route reveal", (route, reveal) => {
+    const state = reachFinal(route, "accepted");
+    expect(state.unlockedFiles).toContain(reveal);
+    expect(
+      ["truth_reveal", "impersonation_reveal", "silence_reveal"].filter(
+        (id) => state.unlockedFiles.includes(id),
+      ),
+    ).toEqual([reveal]);
   });
 
   it("keeps evidence confrontations locked until their files are opened", () => {

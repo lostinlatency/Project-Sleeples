@@ -69,6 +69,11 @@ const witnessChoices: Record<Witness, string[]> = {
   sarahlou_x: ["sarah0-emily", "sarah1-why", "sarah2-trust", "sarah3-play"],
   tom_d: ["tom0-box", "tom1-drive", "tom2-keep", "tom3-watch"],
 };
+const postWebcamChoice: Record<Witness, string> = {
+  mike_sk8: "m4-emily",
+  sarahlou_x: "sarah4-future",
+  tom_d: "tom4-father",
+};
 
 async function finishWitness(page: Page, contactId: Witness) {
   await openContact(page, contactId);
@@ -84,6 +89,7 @@ async function finishWitness(page: Page, contactId: Witness) {
     tom_d: ".mock-case",
   }[contactId];
   await expect(page.locator(clue)).toBeVisible();
+  await choose(page, postWebcamChoice[contactId]);
   await expect(
     page.getByText(`${contactId} is now Offline`, { exact: true }),
   ).toBeVisible({ timeout: 30_000 });
@@ -150,6 +156,10 @@ test("a Reactor token failure falls back to text once without replaying the webc
   await expect(
     page.getByText("now it says emily_backup_2. i did not write that"),
   ).toHaveCount(1);
+  await choose(page, "m4-own");
+  await expect(
+    page.getByText("mike_sk8 is now Offline", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
 });
 
 for (const [route, decision, ending] of [

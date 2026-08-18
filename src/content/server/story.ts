@@ -40,6 +40,7 @@ export const STORY: Record<string, StoryNode> = {
     lines: [
       "where have u been?",
       "u said brb and then disappeared for like 2 hours",
+      "i was meant to study chemistry but jamie sent me this terrible band instead",
     ],
     choices: [
       c("s1-promise", "sorry. i came back like i promised.", "s2", "lie"),
@@ -51,6 +52,7 @@ export const STORY: Record<string, StoryNode> = {
     id: "s2",
     lines: [
       "the beach, remember?",
+      "i drew the hotel sign on my shoes and mum said id ruined them",
       "can u open the picture in my documents? i wanna know if its the one i sent u",
     ],
     choices: [
@@ -192,6 +194,7 @@ export const STORY: Record<string, StoryNode> = {
     lines: [
       "i kept the webcam on because i thought he would come back",
       "i didnt want him to see an empty chair",
+      "i can show u im really here. u dont have to show me anything back",
     ],
     choices: [
       c(
@@ -207,8 +210,8 @@ export const STORY: Record<string, StoryNode> = {
   truth4: {
     id: "truth4",
     lines: [
-      "let me turn the camera on",
-      "i need one real thing before this goes dark again",
+      "let me turn my camera on",
+      "if ur telling the truth i need u to see me say goodbye",
     ],
     choices: [
       c("t4-accept", "i’ll stay. turn it on.", "truth5", "truth"),
@@ -219,7 +222,11 @@ export const STORY: Record<string, StoryNode> = {
   },
   truth5: {
     id: "truth5",
-    lines: ["did it freeze for u too?", "i think i understand now"],
+    lines: [
+      "did it freeze for u too?",
+      "your side stayed black. maybe thats better",
+      "i think i understand now",
+    ],
     choices: [
       c("t5-release", "you can stop waiting, Emily.", undefined, "truth", {
         ending: "tell him i waited. but dont tell him im still waiting",
@@ -301,7 +308,10 @@ export const STORY: Record<string, StoryNode> = {
   },
   lie4: {
     id: "lie4",
-    lines: ["turn your camera on then", "if its really u i wanna see"],
+    lines: [
+      "ill turn mine on first",
+      "then turn your camera on. if its really u i wanna see",
+    ],
     choices: [
       c("l4-accept", "you first, sleepy.", "lie5", "lie"),
       c("l4-delay", "my camera is broken. let me see you.", "lie5", "lie"),
@@ -405,8 +415,8 @@ export const STORY: Record<string, StoryNode> = {
   silence4: {
     id: "silence4",
     lines: [
-      "i want to try the webcam",
-      "then at least i wont be talking to an empty box",
+      "i want to turn my webcam on",
+      "u can leave yours black. i just dont want my last message to be text",
     ],
     choices: [
       c("a4-accept", "turn it on. i’m here.", "silence5", "truth"),
@@ -422,7 +432,11 @@ export const STORY: Record<string, StoryNode> = {
   },
   silence5: {
     id: "silence5",
-    lines: ["the picture stopped", "are u still there?"],
+    lines: [
+      "the picture stopped",
+      "your side was black the whole time but u stayed",
+      "are u still there?",
+    ],
     choices: [
       c("a5-here", "i’m still here.", undefined, "truth", {
         ending: "okay. then i can be the one who says goodbye",
@@ -565,7 +579,7 @@ export function routeScript(
   state?: Pick<NarrativeState, "story" | "discoveredFiles">,
 ) {
   if (route === "truth")
-    return `I kept thinking Daniel would come back tomorrow. I left the webcam on because I didn't want him to see an empty chair. But tomorrow happened without me, didn't it? If you ever find him, say I waited, but he doesn't have to come back. I think I can stop waiting now.`;
+    return `I kept thinking Daniel would come back tomorrow. I left the webcam on because I didn't want him to see an empty chair. Your side is still black, but that's okay. You can see that I'm really here. Tomorrow happened without me, didn't it? If you ever find him, say I waited, but he doesn't have to come back. I think I can stop waiting now.`;
   if (route === "impersonation") {
     const tell = impersonationTell(state?.story.choiceHistory ?? []);
     const realization = impersonationRealization(
@@ -574,9 +588,9 @@ export function routeScript(
     const evidence = usedRecoveredEvidence(state?.story.choiceHistory ?? [])
       ? "You went through his files just to become him for a few minutes."
       : "You kept guessing until I gave you the answers you needed.";
-    return `${realization[0].toUpperCase()}${realization.slice(1)}. ${tell} I don't know who you are. ${evidence} Please don't answer. I don't want another lie to be the last thing I hear.`;
+    return `${realization[0].toUpperCase()}${realization.slice(1)}. ${tell} Your side is black, so you knew I couldn't verify you. I don't know who you are. ${evidence} Please don't answer. I don't want another lie to be the last thing I hear.`;
   }
-  return `I don't know who is sitting there. Maybe that is the point. Daniel always said be right back when he was afraid to say goodbye. So just stay until the picture stops, okay? You don't have to explain anything. I only need to know the chair on the other side isn't empty yet.`;
+  return `I don't know who is sitting there. Your camera is black, and maybe that is the point. Daniel always said be right back when he was afraid to say goodbye. So just stay until the picture stops, okay? You don't have to explain anything. I only need to know somebody is still typing on the other side.`;
 }
 
 export function endingFor(choice: StoryChoice, state: NarrativeState) {

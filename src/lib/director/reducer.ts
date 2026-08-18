@@ -19,8 +19,12 @@ import {
   CHAPTER_TWO_STORY,
   CONTACT_COMPLETION,
   CONTACT_WEBCAM_SCRIPTS,
+  chapterTwoChoiceCallback,
   chapterTwoChoices,
   finalLines,
+  postWebcamNode,
+  routeExclusiveEvidence,
+  trustOutcome,
 } from "@/content/server/chapter-two";
 
 const now = () => new Date().toISOString();
@@ -136,11 +140,26 @@ function completeChapterTwoContact(
   const convergence = ["mike_sk8", "sarahlou_x", "tom_d"].every((id) =>
     completedContacts.includes(id as ContactId),
   );
+  const routeEvidence = convergence
+    ? [routeExclusiveEvidence(state.story.route)]
+    : [];
   const delivered = completion.lines.map((line, index) =>
     index === completion.lines.length - 1
       ? { ...contactLine(contactId, line, index), sender: "system" as const }
       : contactLine(contactId, line, index),
   );
+  if (convergence) {
+    const revealName = {
+      truth: "emily_weekend.log",
+      impersonation: "daniel_unsent.txt",
+      silence: "blank_reply.log",
+      undecided: "recovered_fragment.dat",
+    }[state.story.route];
+    delivered.push({
+      ...msg(`Recovered file unlocked: ${revealName}`, "direct"),
+      sender: "system" as const,
+    });
+  }
   const next = withMessages(
     {
       ...state,
@@ -151,6 +170,7 @@ function completeChapterTwoContact(
           ...state.unlockedFiles,
           ...completion.unlocks,
           ...recoveredFragment,
+          ...routeEvidence,
         ]),
       ],
       webcam: { ...state.webcam, status: webcamStatus },
@@ -166,6 +186,7 @@ function completeChapterTwoContact(
             ...state.chapterTwo.knownEvidence,
             ...completion.evidence,
             ...recoveredFragment,
+            ...routeEvidence,
           ]),
         ],
         completedContacts,
@@ -185,6 +206,62 @@ function completeChapterTwoContact(
     nextState: next,
     authoredMessages: delivered,
     uiActions: [{ type: "SET_OFFLINE", payload: contactId }],
+    shouldPrepareWebcam: false,
+    actorObjective: null,
+  };
+}
+
+function prepareChapterTwoPostWebcam(
+  state: NarrativeState,
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  webcamStatus: NarrativeState["webcam"]["status"],
+  fallback?: string,
+): DirectorResult {
+  const nodeId = postWebcamNode(contactId);
+  const node = CHAPTER_TWO_STORY[nodeId];
+  const trust = trustOutcome(
+    contactId,
+    state.chapterTwo.contactTrust[contactId],
+  );
+  const authored = [
+    ...(fallback ? [contactLine(contactId, fallback)] : []),
+    ...node.lines.map((line, index) => contactLine(contactId, line, index)),
+    contactLine(contactId, trust.line, node.lines.length),
+  ];
+  const next = withMessages(
+    {
+      ...state,
+      turn: state.turn + 1,
+      phase: "post_webcam",
+      unlockedFiles: [
+        ...new Set([...state.unlockedFiles, ...trust.unlocks]),
+      ],
+      webcam: { ...state.webcam, status: webcamStatus },
+      chapterTwo: {
+        ...state.chapterTwo,
+        knownEvidence: [
+          ...new Set([...state.chapterTwo.knownEvidence, ...trust.unlocks]),
+        ],
+        contactThreads: {
+          ...state.chapterTwo.contactThreads,
+          [contactId]: {
+            ...state.chapterTwo.contactThreads[contactId],
+            nodeId,
+            visited: [
+              ...state.chapterTwo.contactThreads[contactId].visited,
+              nodeId,
+            ],
+            choices: chapterTwoChoices(state, nodeId),
+          },
+        },
+      },
+    },
+    authored,
+  );
+  return {
+    nextState: next,
+    authoredMessages: authored,
+    uiActions: [],
     shouldPrepareWebcam: false,
     actorObjective: null,
   };
@@ -262,10 +339,15 @@ function reduceChapterTwo(
         },
       },
     };
-    if (!thread.opened)
-      authored = CHAPTER_TWO_STORY[thread.nodeId].lines.map((line, index) =>
-        contactLine(event.contactId, line, index),
-      );
+    if (!thread.opened) {
+      const callback = chapterTwoChoiceCallback(state, event.contactId);
+      authored = [
+        ...(callback ? [contactLine(event.contactId, callback)] : []),
+        ...CHAPTER_TWO_STORY[thread.nodeId].lines.map((line, index) =>
+          contactLine(event.contactId, line, index),
+        ),
+      ];
+    }
     ui.push({ type: "OPEN_CONVERSATION" });
   } else if (event.type === "CONTACT_CHOICE") {
     const contactId = state.chapterTwo.activeContact;
@@ -302,6 +384,15 @@ function reduceChapterTwo(
         contactTrust: { ...next.chapterTwo.contactTrust, [contactId]: trust },
       },
     };
+    if (node.completesContact && contactId !== "sleepless_17") {
+      const result = completeChapterTwoContact(
+        withMessages(next, authored),
+        contactId,
+        state.webcam.status,
+      );
+      result.authoredMessages = [...authored, ...result.authoredMessages];
+      return result;
+    }
     if (node.preparesWebcam) {
       if (contactId === "sleepless_17") return blocked(state);
       next = {
@@ -374,7 +465,7 @@ function reduceChapterTwo(
   ) {
     const contactId = state.chapterTwo.activeContact;
     if (contactId === "sleepless_17") return blocked(state);
-    const result = completeChapterTwoContact(
+    return prepareChapterTwoPostWebcam(
       next,
       contactId,
       event.type === "LTX_COMPLETED"
@@ -382,19 +473,12 @@ function reduceChapterTwo(
         : event.type === "WEBCAM_DECLINED"
           ? "declined"
           : "failed",
-    );
-    if (event.type !== "LTX_COMPLETED") {
-      const fallback = contactLine(
-        contactId,
-        event.type === "WEBCAM_DECLINED"
+      event.type === "LTX_COMPLETED"
+        ? undefined
+        : event.type === "WEBCAM_DECLINED"
           ? "fine. ill type what the camera would have shown"
           : "video cut out. the important part is still here",
-        0,
-      );
-      result.authoredMessages.unshift(fallback);
-      result.nextState = withMessages(result.nextState, [fallback]);
-    }
-    return result;
+    );
   } else if (
     event.type === "FILE_OPENED" ||
     event.type === "EVIDENCE_INSPECTED"

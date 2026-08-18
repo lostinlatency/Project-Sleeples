@@ -162,6 +162,22 @@ export const FILES: PublicFileNode[] = [
     modifiedAt: "10/18/2005 2:23 AM",
     initiallyVisible: false,
   },
+  ...[
+    ["mike_private", "mike_private_notes.txt", "10/18/2005 2:25 AM", "text"],
+    ["sarah_private", "emily_future.txt", "10/18/2005 2:26 AM", "text"],
+    ["tom_private", "move_record.log", "10/18/2005 2:27 AM", "log"],
+    ["truth_reveal", "emily_weekend.log", "10/18/2005 2:28 AM", "log"],
+    ["impersonation_reveal", "daniel_unsent.txt", "10/18/2005 2:28 AM", "text"],
+    ["silence_reveal", "blank_reply.log", "10/18/2005 2:28 AM", "log"],
+  ].map(([id, name, modifiedAt, kind]) => ({
+    id,
+    parentId: "personal",
+    name,
+    kind: kind as "text" | "log",
+    icon: kind,
+    modifiedAt,
+    initiallyVisible: false,
+  })),
 ];
 export function visibleFiles(unlocked: string[]) {
   return FILES.filter((f) => f.initiallyVisible || unlocked.includes(f.id));

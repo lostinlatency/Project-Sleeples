@@ -13,7 +13,7 @@ export const FILE_CONTENTS: Record<
     kind: "text",
     title: "moving.txt - Notepad",
     content:
-      "oct 15, 2005\n\nemily's getting too attached. mum says we move friday. i still haven't told her.",
+      "oct 15, 2005\n\ndad found the school address again. mum says we leave friday and can't tell anyone where yet. emily's getting too attached. if i tell her we're moving she'll ask where and i can't answer. i still haven't told her.",
   },
   chat_log: {
     kind: "log",
@@ -24,7 +24,8 @@ export const FILE_CONTENTS: Record<
   warning_note: {
     kind: "text",
     title: "dont forget.txt - Notepad",
-    content: "don't accept her webcam\nshe'll see the boxes\ntell her tomorrow",
+    content:
+      "don't start webcam\nshe'll ask me to turn mine on\nshe'll see the boxes\ntell her tomorrow",
   },
   holiday_photo: {
     kind: "image",
@@ -90,5 +91,42 @@ export const FILE_CONTENTS: Record<
     kind: "text",
     title: "brb.txt - Notepad",
     content: "you forgot one",
+  },
+  mike_private: {
+    kind: "text",
+    title: "mike_private_notes.txt - Notepad",
+    content:
+      "daniel asked for normal replies, not goodbyes. i gave him emily's jokes, sarah's corrections, my excuses. i told myself a voice was not a person.\n\nI was wrong about at least one of those things.",
+  },
+  sarah_private: {
+    kind: "text",
+    title: "emily_future.txt - Notepad",
+    content:
+      "things em said not to tell daniel:\n- apply to art school next year\n- cut her hair after exams\n- see jamie's awful band on friday\n- stop waiting for people who only say brb",
+  },
+  tom_private: {
+    kind: "log",
+    title: "move_record.log - Notepad",
+    content:
+      "[10/15/2005] school office called mum. father requested daniel's address.\n[10/16/2005] boxes moved after dark.\n[10/18/2005] modem removed. computer left because network accounts contained the new surname and destination.",
+  },
+  truth_reveal: {
+    kind: "log",
+    title: "emily_weekend.log - Notepad",
+    content:
+      "sleepless_17: chemistry exam friday then jamies band\nsleepless_17: if theyre awful im applying to art school just to escape\nsleepless_17: dont tell daniel yet. i want one plan thats mine first",
+  },
+  impersonation_reveal: {
+    kind: "text",
+    title: "daniel_unsent.txt - Notepad",
+    content:
+      "em — dad found us again. mum says nobody can know where we're going, not even you. if i explain you'll ask me to stay or tell you where. i can't do either.\n\nthis is not your fault.\n\n[unsent]",
+  },
+  silence_reveal: {
+    kind: "log",
+    title: "blank_reply.log - Notepad",
+    content:
+      "[10/18/2005 2:20 AM] visitor: ...\n[10/18/2005 2:21 AM] visitor: ...\n[10/18/2005 2:22 AM] visitor: ...\n\nNOTE: entries predate recovered session start.",
+    corrupted: true,
   },
 };

@@ -76,6 +76,9 @@ test("Mike's Reactor/LTX performance streams and completes in the story", async 
       },
     )
     .toBeGreaterThan(0);
+  const postWebcamChoice = page.getByTestId("choice-m4-emily");
+  await expect(postWebcamChoice).toBeEnabled({ timeout: 120_000 });
+  await postWebcamChoice.click();
   await expect(
     page.getByText("mike_sk8 is now Offline", { exact: true }),
   ).toBeVisible({ timeout: 120_000 });
