@@ -28,7 +28,7 @@ async function reset(page: Page) {
 async function openMsn(page: Page) {
   await page.getByTestId("desktop-msn").dblclick();
   await expect(page.getByTestId("contact-sleepless")).toBeVisible();
-  await page.getByTestId("contact-sleepless").dblclick();
+  await page.getByTestId("contact-sleepless").click();
   await expect(page.getByText("daniel?")).toBeVisible({ timeout: 8000 });
 }
 async function choose(page: Page, id: string) {
@@ -106,7 +106,7 @@ test("contact groups collapse and the authored conversation restores after reloa
   await online.click();
   await expect(page.getByTestId("contact-sleepless")).toHaveCount(0);
   await online.click();
-  await page.getByTestId("contact-sleepless").dblclick();
+  await page.getByTestId("contact-sleepless").click();
   await choose(page, "s0-warm");
   await expect(page.getByText("where have u been?")).toBeVisible();
   await page.reload();
@@ -115,7 +115,7 @@ test("contact groups collapse and the authored conversation restores after reloa
     "true",
   );
   await page.getByTestId("desktop-msn").dblclick();
-  await page.getByTestId("contact-sleepless").dblclick();
+  await page.getByTestId("contact-sleepless").click();
   await expect(page.getByText("where have u been?")).toBeVisible();
   await expect(page.getByTestId("choice-s1-promise")).toBeVisible();
 });
@@ -334,7 +334,7 @@ test("five idle prompts temporarily sign out without losing story progress", asy
   await page.reload();
   await page.getByTestId("desktop-msn").dblclick();
   await expect(page.getByRole("button", { name: "Online (0)" })).toBeVisible();
-  await page.getByTestId("contact-sleepless").dblclick();
+  await page.getByTestId("contact-sleepless").click();
   await expect(page.getByText("ur back")).toBeVisible({ timeout: 8000 });
   await expect(page.getByTestId("choice-s1-promise")).toBeVisible();
 });
@@ -397,7 +397,7 @@ test("opening the contact immediately does not depend on the delayed greeting", 
   await page.clock.install();
   await reset(page);
   await page.getByTestId("desktop-msn").dblclick();
-  await page.getByTestId("contact-sleepless").dblclick();
+  await page.getByTestId("contact-sleepless").click();
   await page.clock.fastForward(4_000);
   await expect(page.getByText("daniel?")).toBeVisible();
   await expect(page.getByTestId("choice-s0-warm")).toBeVisible();

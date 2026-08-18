@@ -157,9 +157,9 @@ function completeChapterTwoContact(
       chapterTwo: {
         ...state.chapterTwo,
         stage: convergence ? "convergence" : "interviews",
-        activeContact: convergence
-          ? "sleepless_17"
-          : state.chapterTwo.activeContact,
+        // Keep the completed witness visible. Emily announces the convergence
+        // through an MSN notification and the player chooses when to open it.
+        activeContact: state.chapterTwo.activeContact,
         exposureStage: Math.min(5, state.chapterTwo.exposureStage + 1),
         knownEvidence: [
           ...new Set([
@@ -226,14 +226,22 @@ function reduceChapterTwo(
     });
     ui.push({ type: "PLAY_SOUND", payload: "message" });
   } else if (event.type === "CONTACT_OPENED") {
+    const investigationStarted = [
+      "interviews",
+      "convergence",
+      "final",
+      "complete",
+    ].includes(state.chapterTwo.stage);
     const allowed =
-      event.contactId === "mike_sk8" ||
+      (event.contactId === "mike_sk8" && investigationStarted) ||
       (event.contactId === "sarahlou_x" &&
         state.chapterTwo.completedContacts.includes("mike_sk8")) ||
       (event.contactId === "tom_d" &&
         state.chapterTwo.completedContacts.includes("mike_sk8")) ||
       (event.contactId === "sleepless_17" &&
-        ["convergence", "final"].includes(state.chapterTwo.stage));
+        ["convergence", "final", "complete"].includes(
+          state.chapterTwo.stage,
+        ));
     if (!allowed) return blocked(state);
     const thread = state.chapterTwo.contactThreads[event.contactId];
     next = {

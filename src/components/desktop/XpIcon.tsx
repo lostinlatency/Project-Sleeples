@@ -91,10 +91,12 @@ export function XpIcon({
   name,
   size = 48,
   className = "",
+  priority = false,
 }: {
   name: XpIconName;
   size?: number;
   className?: string;
+  priority?: boolean;
 }) {
   return (
     <Image
@@ -104,6 +106,7 @@ export function XpIcon({
       width={size}
       height={size}
       unoptimized
+      priority={priority}
       aria-hidden="true"
     />
   );

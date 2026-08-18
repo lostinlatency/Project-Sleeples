@@ -87,6 +87,16 @@ function reachFinal(
 }
 
 describe("chapter two story graph", () => {
+  it("does not let an offline witness bypass the file-transfer decision", () => {
+    const state = chapterTwo();
+    const attempted = event(state, {
+      type: "CONTACT_OPENED",
+      contactId: "mike_sk8",
+    });
+    expect(attempted).toEqual(state);
+    expect(attempted.chapterTwo.stage).toBe("file_offer");
+  });
+
   it("has valid links, unique choices, authored reactions, and three intentional options per node", () => {
     const choiceIds: string[] = [];
     for (const node of Object.values(CHAPTER_TWO_STORY)) {
@@ -142,6 +152,23 @@ describe("chapter two story graph", () => {
         "final",
       );
     }
+  });
+
+  it("keeps the final witness visible until the player opens Emily's notification", () => {
+    let state = event(chapterTwo(), {
+      type: "FILE_TRANSFER_DECIDED",
+      decision: "accepted",
+    });
+    state = finishWitness(state, "mike_sk8");
+    state = finishWitness(state, "tom_d");
+    state = finishWitness(state, "sarahlou_x");
+    expect(state.chapterTwo.stage).toBe("convergence");
+    expect(state.chapterTwo.activeContact).toBe("sarahlou_x");
+    state = event(state, {
+      type: "CONTACT_OPENED",
+      contactId: "sleepless_17",
+    });
+    expect(state.chapterTwo.activeContact).toBe("sleepless_17");
   });
 
   it("keeps evidence confrontations locked until their files are opened", () => {

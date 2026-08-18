@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:chapter2": "playwright test --config=playwright.chapter-two.config.ts",
+    "test:e2e:chapter2:live": "playwright test --config=playwright.chapter-two-live.config.ts",
     "secret": "node -e \"import('node:crypto').then(c=>console.log(c.randomBytes(32).toString('base64url')))\""
   },
   "dependencies": {

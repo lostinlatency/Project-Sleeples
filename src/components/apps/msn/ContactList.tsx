@@ -68,7 +68,6 @@ export function ContactList() {
             <button
               key={contact.id}
               className="contact online"
-              onDoubleClick={() => openContact(contact.id as ContactId)}
               onClick={() => openContact(contact.id as ContactId)}
               data-testid={
                 contact.id === "sleepless_17"
@@ -110,12 +109,22 @@ export function ContactList() {
                 </span>
               </>
             );
-            return c.id === "sleepless_17" && view?.chapter !== 2 ? (
+            const storyContact = [
+              "sleepless_17",
+              "mike_sk8",
+              "sarahlou_x",
+              "tom_d",
+            ].includes(c.id);
+            return storyContact ? (
               <button
                 key={c.id}
                 className="contact offline"
-                onDoubleClick={() => openContact("sleepless_17")}
-                data-testid="contact-sleepless"
+                onClick={() => openContact(c.id as ContactId)}
+                data-testid={
+                  c.id === "sleepless_17"
+                    ? "contact-sleepless"
+                    : `contact-${c.id}`
+                }
                 data-contact-id={c.id}
               >
                 {content}
