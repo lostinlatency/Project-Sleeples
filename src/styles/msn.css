@@ -512,6 +512,25 @@
 @keyframes cdLabelHide { 0%, 57% { opacity: 1; } 58%, 69% { opacity: 0; } 70%, 100% { opacity: 1; } }
 @keyframes chairFlicker { 0%, 63% { opacity: 0; } 64%, 67% { opacity: .82; } 68%, 100% { opacity: 0; } }
 @keyframes caseAnswer { 0%, 9%, 24%, 39%, 49%, 69%, 100% { opacity: .18; } 10%, 23%, 40%, 48%, 70%, 82% { opacity: 1; } }
+.msn-notifications { position: absolute; right: 8px; bottom: 39px; z-index: 10000; width: min(292px, calc(100% - 16px)); display: flex; flex-direction: column-reverse; gap: 7px; pointer-events: none; }
+.msn-notification { pointer-events: auto; overflow: hidden; color: #111; background: #ffffe1; border: 1px solid #003c9d; border-radius: 7px 7px 2px 2px; box-shadow: 2px 3px 8px #00184d66; transform-origin: bottom right; animation: msnToastIn 260ms cubic-bezier(.2,0,0,1) both; }
+.msn-notification.closing { animation: msnToastOut 180ms ease-out both; }
+.msn-notification header { min-height: 28px; padding: 2px 3px 2px 7px; display: flex; align-items: center; justify-content: space-between; color: white; background: linear-gradient(180deg,#0c78df 0%,#0754bd 54%,#003b91 100%); font-weight: 700; }
+.msn-notification header span { display: flex; align-items: center; gap: 5px; }
+.msn-notification header button { width: 24px; height: 24px; padding: 0; border: 1px solid #fff9; border-radius: 3px; color: white; background: linear-gradient(#ee876f,#c9361b); font: 700 16px/20px Tahoma,sans-serif; }
+.notification-body { width: 100%; min-height: 82px; padding: 9px; display: grid; grid-template-columns: 42px 1fr; gap: 9px; text-align: left; border: 0; background: linear-gradient(110deg,#fff 0%,#ffffdf 72%); color: #111; }
+.notification-body:hover { background: #fff; }
+.notification-body:active { transform: scale(.96); }
+.msn-notification button:focus-visible { outline: 2px solid #ffb500; outline-offset: -3px; }
+.notification-body img, .notification-avatar { width: 42px; height: 42px; object-fit: cover; outline: 1px solid #0000001a; background: #d8ebfb; }
+.notification-body > span:last-child { min-width: 0; }
+.notification-body b, .notification-body small { display: block; }
+.notification-body b { color: #064a9f; }
+.notification-body small { margin-top: 1px; color: #4e647b; }
+.notification-body p { margin: 5px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes msnToastIn { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes msnToastOut { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .msn-notification, .msn-notification.closing { animation: none; } }
 .local-camera {
   position: absolute;
   inset-inline-end: 14px;

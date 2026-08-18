@@ -220,7 +220,10 @@ function reduceChapterTwo(
             : next.chapterTwo.knownEvidence,
       },
     };
-    authored.push(contactLine("mike_sk8", "mike_sk8 is now Online", 1));
+    authored.push({
+      ...contactLine("mike_sk8", "mike_sk8 is now Online", 1),
+      sender: "system",
+    });
     ui.push({ type: "PLAY_SOUND", payload: "message" });
   } else if (event.type === "CONTACT_OPENED") {
     const allowed =
@@ -474,10 +477,7 @@ export function reduceNarrative(
           choices: choicesFor(next, "s0"),
         },
       };
-      ui.push(
-        { type: "OPEN_CONVERSATION" },
-        { type: "PLAY_SOUND", payload: "message" },
-      );
+      ui.push({ type: "PLAY_SOUND", payload: "message" });
     }
   }
 

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CONTACTS } from "@/content/public/contacts";
 import { openApp } from "@/stores/desktop-store";
 import { useNarrative } from "@/components/system/NarrativeProvider";
@@ -11,23 +11,11 @@ import { useDesktopStore } from "@/stores/desktop-store";
 
 export function ContactList() {
   const { sendEvent, view } = useNarrative();
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [onlineOpen, setOnlineOpen] = useState(true);
   const [offlineOpen, setOfflineOpen] = useState(true);
   useEffect(() => {
     playXpSound("sign-in");
   }, []);
-  useEffect(() => {
-    if (view && !view.firstMessageSent) {
-      timer.current = setTimeout(() => {
-        if (document.visibilityState === "visible")
-          void sendEvent({ type: "MSN_OPENED" });
-      }, 3600);
-    }
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [sendEvent, view]);
   const openContact = (contactId: ContactId) => {
     const contact = CONTACTS.find((item) => item.id === contactId)!;
     openApp("msn-chat", `${contact.name} - Conversation`, { contactId });

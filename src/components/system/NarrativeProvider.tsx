@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type {
+  ContactId,
   DeliveredMessage,
   NarrativeEvent,
   PublicView,
@@ -39,6 +40,12 @@ type OpenFile = {
   assetUrl?: string;
   corrupted?: boolean;
 };
+export interface MsnNotification {
+  id: string;
+  contactId: ContactId;
+  text: string;
+  kind: "message" | "online";
+}
 interface NarrativeContextValue {
   ready: boolean;
   view: PublicView | null;
@@ -53,6 +60,7 @@ interface NarrativeContextValue {
   webcamStream: MediaStream | null;
   sound: boolean;
   volume: number;
+  notifications: MsnNotification[];
   chooseReply: (choiceId: string) => Promise<void>;
   sendEvent: (event: NarrativeEvent) => Promise<void>;
   openFile: (id: string) => Promise<OpenFile | null>;
@@ -64,6 +72,8 @@ interface NarrativeContextValue {
   reset: () => Promise<void>;
   toggleSound: () => void;
   setVolume: (volume: number) => void;
+  dismissNotification: (id: string) => void;
+  openNotification: (notification: MsnNotification) => Promise<void>;
 }
 const Context = createContext<NarrativeContextValue | null>(null);
 export function useNarrative() {
@@ -89,6 +99,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const [reactorStart, setReactorStart] = useState(false);
   const [sound, setSound] = useState(true);
   const [volume, setVolumeState] = useState(0.65);
+  const [notifications, setNotifications] = useState<MsnNotification[]>([]);
   const envelopeRef = useRef("");
   const viewRef = useRef<PublicView | null>(null);
   const messagesRef = useRef<DeliveredMessage[]>([]);
@@ -96,15 +107,61 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const requestChain = useRef<Promise<void>>(Promise.resolve());
   const webcamLock = useRef(false);
   const completionLock = useRef(false);
+  const queueNotification = useCallback(
+    (contactId: ContactId, text: string, kind: MsnNotification["kind"]) => {
+      setNotifications((current) => {
+        const existing = current.find((item) => item.contactId === contactId);
+        const notification = {
+          id: existing?.id ?? `msn-${contactId}-${Date.now()}`,
+          contactId,
+          text,
+          kind,
+        };
+        return [
+          ...current.filter((item) => item.contactId !== contactId),
+          notification,
+        ].slice(-3);
+      });
+    },
+    [],
+  );
   const persist = useCallback(
     (e: string, v: PublicView, m = messagesRef.current) => {
+      const previous = viewRef.current;
       envelopeRef.current = e;
       viewRef.current = v;
       messagesRef.current = m;
       setView(v);
+      if (previous?.chapter === 2 && v.chapter === 2) {
+        const previews: Partial<Record<ContactId, string>> = {
+          mike_sk8: "Daniel's computer just appeared online. Don't close MSN.",
+          sarahlou_x: "Mike told me you found BRB. We need to talk.",
+          tom_d:
+            "I'm Daniel's brother. I was the last one to shut that computer down.",
+          sleepless_17: "i remember things that didnt happen to me",
+        };
+        const notificationOrder: ContactId[] = [
+          "mike_sk8",
+          "sarahlou_x",
+          "tom_d",
+          "sleepless_17",
+        ];
+        const newlyOnline = notificationOrder.filter(
+          (contactId) =>
+            previous.contactStatuses[contactId] !== "online" &&
+            v.contactStatuses[contactId] === "online",
+        );
+        const contactId = newlyOnline[0];
+        if (contactId)
+          queueNotification(
+            contactId,
+            previews[contactId] ?? "is now online",
+            "online",
+          );
+      }
       void saveSession({ envelope: e, publicView: v, messages: m });
     },
-    [],
+    [queueNotification],
   );
   useEffect(() => {
     void (async () => {
@@ -219,11 +276,22 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           setTyping(false);
         }
         append([item]);
-        if (item.sender !== "system") beep();
+        if (item.sender !== "system") {
+          beep();
+          const desktop = useDesktopStore.getState();
+          const chat = desktop.windows["msn-chat"];
+          const chatVisible =
+            desktop.activeWindowId === "msn-chat" &&
+            chat &&
+            !chat.minimized &&
+            viewRef.current?.activeContact === item.contactId;
+          if (!chatVisible)
+            queueNotification(item.contactId, item.text, "message");
+        }
         await new Promise((r) => setTimeout(r, 220));
       }
     },
-    [append, beep],
+    [append, beep, queueNotification],
   );
   const rawEvent = useCallback(
     async (event: NarrativeEvent) => {
@@ -301,6 +369,30 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const sendEvent = useCallback(
     (event: NarrativeEvent) => enqueue(() => rawEvent(event)),
     [enqueue, rawEvent],
+  );
+  const dismissNotification = useCallback((notificationId: string) => {
+    setNotifications((current) =>
+      current.filter((item) => item.id !== notificationId),
+    );
+  }, []);
+  const openNotification = useCallback(
+    async (notification: MsnNotification) => {
+      dismissNotification(notification.id);
+      const name = notification.contactId;
+      openApp("msn-chat", `${name} - Conversation`, {
+        contactId: notification.contactId,
+      });
+      useDesktopStore.getState().updateWindow("msn-chat", {
+        title: `${name} - Conversation`,
+        payload: { contactId: notification.contactId },
+      });
+      if (viewRef.current?.chapter === 2)
+        await sendEvent({
+          type: "CONTACT_OPENED",
+          contactId: notification.contactId,
+        });
+    },
+    [dismissNotification, sendEvent],
   );
   const chooseReply = useCallback(
     async (choiceId: string) => {
@@ -420,6 +512,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       webcamStream,
       sound,
       volume,
+      notifications,
       chooseReply,
       sendEvent,
       openFile,
@@ -429,6 +522,8 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       reset,
       toggleSound: () => setSound((s) => !s),
       setVolume,
+      dismissNotification,
+      openNotification,
     }),
     [
       acceptWebcam,
@@ -436,10 +531,13 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       chooseReply,
       declineWebcam,
       decideFileTransfer,
+      dismissNotification,
       fileTransfer,
       invite,
       messages,
+      notifications,
       openFile,
+      openNotification,
       ready,
       reset,
       sendEvent,
@@ -464,11 +562,11 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           script={webcamScript}
           avatarPath={
             view?.activeContact === "mike_sk8"
-              ? "/assets/avatars/mike_sk8.svg"
+              ? "/assets/avatars/mike_sk8-v2.jpg"
               : view?.activeContact === "sarahlou_x"
-                ? "/assets/avatars/sarahlou_x.svg"
+                ? "/assets/avatars/sarahlou_x-v2.jpg"
                 : view?.activeContact === "tom_d"
-                  ? "/assets/avatars/tom_d.svg"
+                  ? "/assets/avatars/tom_d-v2.jpg"
                   : "/assets/avatars/sleepless_17.webp"
           }
           startRequested={reactorStart}
