@@ -1,16 +1,62 @@
 # Project Sleepless
 
-> This computer has not been online since 2005. One contact is still online.
+> This computer has been offline since 2005. Someone on MSN is still waiting.
 
-Project Sleepless is an 8–12 minute, full-screen browser narrative that behaves like a recovered Windows XP home computer. Its folders, files, taskbar, windows, Start menu, MSN Messenger conversation, typing rhythm, authored branches, and one late webcam event all share the same server-owned story state.
+Project Sleepless is a browser-based psychological horror game set inside a recovered Windows XP computer.
 
-The story contains 24 authored dialogue nodes. Every node offers three responses, while one decisive exchange branches into three complete routes: tell Sleepless the truth, impersonate Daniel, or refuse to answer. A normal playthrough visits 12 nodes. Recovered evidence unlocks stronger optional replies, each route has its own LTX monologue, and every route ends with a final three-way decision.
+You explore Daniel's old files, talk to people through MSN Messenger, and choose what to tell them. The files you open affect the replies you can use. Your choices in Chapter One also change conversations in Chapter Two.
 
-The default configuration is a complete deterministic demo. It needs no API keys, does not request the visitor's camera or microphone, and exercises the same Director, persistence, files, UI, and API contracts as live mode. The fictional portrait is an original project asset; the recovered beach photograph is a credited public-domain period source. This is a work of fiction.
+A normal playthrough takes about 25 to 35 minutes.
 
-## Quick start — mock mode
+## Gameplay walkthrough
 
-Requires Node.js 20.9 or newer.
+[![Project Sleepless live gameplay preview](public/demo/project-sleepless-preview.gif)](public/demo/project-sleepless-gameplay.mp4)
+
+**[Watch the full 6 minute 27 second live gameplay walkthrough](public/demo/project-sleepless-gameplay.mp4)**
+
+This is one continuous playthrough recorded in live mode. It shows file exploration, both chapters, Emily, Mike, Sarah, Tom, four live LTX video calls, and one ending. The character voices in the video come from the live Reactor audio tracks.
+
+The walkthrough contains story spoilers.
+
+## Story
+
+You are not Daniel. You found his old computer twenty years after it was last online.
+
+When the computer connects to MSN, `sleepless_17` sees Daniel's account come back. She thinks Daniel has finally returned. You can tell her the truth, pretend to be Daniel, or avoid the question.
+
+Daniel's folders contain old messages, notes, photos, and damaged files. Reading them helps you understand his relationship with Emily. Some files also unlock new replies in the conversation.
+
+Chapter Two starts after Emily goes offline. A file arrives from her account, even though she is no longer connected. Mike, Sarah, and Tom then come online. Each person remembers Daniel, Emily, and a program called BRB differently.
+
+The game never gives a simple answer about what is living inside the computer. It could be Daniel's program, a copy made from Emily's messages and videos, or something created from all the damaged data. You decide what to believe and what to do with it.
+
+There are three final choices. The game does not label any of them as the correct ending.
+
+## What is playable
+
+- Two complete story chapters.
+- Four people you can talk to: Emily, Mike, Sarah, and Tom.
+- Three Chapter One paths: truth, impersonation, and silence.
+- Three ways to handle the file transfer at the start of Chapter Two.
+- Mike, Sarah, and Tom can be questioned in different orders after the investigation opens up.
+- Three Chapter Two endings.
+- Replies that unlock after you inspect specific files.
+- Persistent conversations and choices after a page reload.
+- Windows XP folders, files, Notepad, image viewer, Start menu, taskbar, system tray, MSN contacts, notifications, and Nudge.
+- Draggable, minimizable, maximizable, and restorable windows.
+- Mock video calls that work without an API key.
+- Live LTX video and audio calls through Reactor.
+- Written fallbacks if a live call fails, times out, is declined, or is closed early.
+
+The game never asks for your real camera or microphone.
+
+## Run the game in mock mode
+
+Mock mode is the easiest way to run the full game. It does not need a Reactor account and does not spend credits.
+
+You need Node.js 20.9 or newer.
+
+Clone or download the repository. From the project folder, run:
 
 ```bash
 npm install
@@ -18,103 +64,153 @@ cp .env.example .env.local
 npm run secret
 ```
 
-Copy the generated secret into `SESSION_SECRET` in `.env.local`, leave `SLEEPLESS_LTX_MODE=mock`, then run:
+Copy the generated secret into `.env.local`:
+
+```dotenv
+SESSION_SECRET=your_generated_secret
+SLEEPLESS_LTX_MODE=mock
+REACTOR_API_KEY=
+```
+
+Start the app:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), then double-click **MSN Messenger 7.0** and **sleepless_17**. The complete story, webcam simulation, truth route, impersonation route, silence route, route-specific declines, and all endings work without credentials.
+Open [http://localhost:3000](http://localhost:3000).
 
-`SESSION_SECRET` has a development-only fallback in mock mode so a clean install still runs. Set a generated secret for persistent sessions and always set one in live or deployed environments.
+Mock mode contains the complete story, every choice, every ending, and simulated versions of all four video calls.
 
-## Architecture
+## Run the game with live LTX video
 
-```text
-Authored player choice
-  → pure Director reducer (phases, evidence locks, branches, endings)
-  → route-specific Sleepless dialogue
-  → MSN typing and fragment choreography
-  → encrypted replacement session envelope
-```
+Live mode uses Reactor and LTX to generate the character performances.
 
-- `src/components` contains the client-only XP desktop, window manager, applications, MSN UI, audio, persistence, and webcam presentation.
-- `src/stores/desktop-store.ts` uses Zustand for presentation state only. It cannot change narrative phases or unlock story files.
-- `src/lib/director` contains the deterministic narrative state and reducer.
-- `src/content/server` is server-only. Important file contents, character canon, and the 2005 world pack are never imported into client components.
-- `src/lib/narrative/session-envelope.ts` encrypts and authenticates the server narrative state as an opaque JWE. IndexedDB stores the envelope; localStorage is only a fallback.
-- `src/lib/ai` validates the three authored webcam performances before they reach Reactor.
-- Route handlers parse typed Zod inputs, cap body size, return typed failures, and never expose prompts, provider output, or service keys.
-- `src/lib/reactor` implements the installed `@reactor-models/ltx2@3.0.3` lifecycle with typed hooks and browser WebRTC tracks.
-
-The browser can inspect the sanitized public view, but it cannot forge narrative state without invalidating the encrypted envelope. High-cost webcam events and turns carry idempotency keys; Reactor token issuance is limited per local session and scoped to one `reactor/ltx2` session.
-
-## Environment variables
-
-| Variable | Purpose |
-| --- | --- |
-| `SESSION_SECRET` | Strong random secret used to derive the JWE encryption key. Generate with `npm run secret`. |
-| `SLEEPLESS_LTX_MODE` | `mock` for the in-world local webcam simulation; `live` for Reactor WebRTC. |
-| `REACTOR_API_KEY` | Server-only Reactor account API key used solely to mint scoped short-lived JWTs. |
-
-Never prefix these values with `NEXT_PUBLIC_`. `.env.local` is gitignored.
-
-## Live Reactor LTX webcam
-
-Create a Reactor account and API key, then set:
+Add your Reactor API key to `.env.local`:
 
 ```dotenv
+SESSION_SECRET=your_generated_secret
 SLEEPLESS_LTX_MODE=live
-REACTOR_API_KEY=your_server_only_key
+REACTOR_API_KEY=your_server_only_reactor_key
 ```
 
-The app does not connect on page load or when MSN opens. Near the end of identity suspicion it writes the monologue first, asks the server for a JWT limited to `reactor/ltx2` with `max_sessions: 1`, and mounts `Ltx2Provider` only then. This follows Reactor's current [session-scoped token guidance](https://docs.reactor.inc/authentication). After Reactor reports ready, the browser uploads the fictional portrait with the documented [Blob → FileRef flow](https://docs.reactor.inc/concepts/file-uploads), applies the fixed performance prompt, script, seed, WPM, and script-derived duration, and only then tells the Director it may reveal the invitation.
+Restart the app after changing the file.
 
-Accept starts exactly one take. `main_video` and `main_audio` tracks are rendered in the 4:3 MSN panel. Completion, failure, decline, reset, navigation, and unmount tear down the session. The real visitor's webcam and microphone are never requested.
+The app does not connect to Reactor when the page loads. It requests a short-lived token only when a video scene is ready. Each scene allows one take. The connection closes when the scene finishes, fails, is declined, or the video window is closed.
 
-Reactor sessions can incur cost while alive. Late connection, one-token-per-playthrough control, one take, click locks, idempotent completion, and immediate disconnect are intentional cost controls.
+Live sessions can spend Reactor credits. Mock mode is better for normal development and public demos that do not need generated video.
 
-### Replacing the fictional portrait
+Keep `SESSION_SECRET` and `REACTOR_API_KEY` on the server. Do not add `NEXT_PUBLIC_` to either name. Do not commit `.env.local`.
 
-Replace `public/assets/avatars/sleepless_17.webp` with an original raster image at the same path. Use one clearly visible fictional adult, head and shoulders, stable 4:3 room/background, direct or near-direct monitor gaze, ordinary clothing, and neutral light. Avoid text, celebrity resemblance, face obstruction, dramatic motion, and horror styling. The included portrait is original and mock/live compatible.
+## How the project is organized
+
+```text
+Player choice or file interaction
+  -> API event
+  -> story reducer
+  -> encrypted session state
+  -> messages and desktop actions
+  -> mock or live character performance
+```
+
+- `src/content/server` contains the story, character notes, replies, file contents, and video scripts.
+- `src/lib/director` decides which story state comes next.
+- `src/components` contains the Windows XP desktop, applications, MSN interface, and video windows.
+- `src/lib/narrative/session-envelope.ts` encrypts and signs the saved story state.
+- `src/lib/reactor` manages live LTX setup, WebRTC tracks, retries, and cleanup.
+- `src/stores/desktop-store.ts` controls window positions and other visual state. It cannot change the story.
+
+The browser saves an encrypted story envelope in IndexedDB. Reloading the page restores the active chapter, conversations, evidence, and choices.
+
+## Tests
+
+The current build has been checked in mock mode and live mode.
+
+- All 123 written dialogue choices were selected through the browser interface.
+- 54 complete Chapter Two combinations were checked across the Chapter One history, file decision, witness order, and ending.
+- All nine combinations of the three Chapter One paths and three Chapter Two endings were checked.
+- Emily's three Chapter One performances, Mike, Sarah, and Tom were tested with live LTX.
+- The live tests check moving video, an active audio track, one token request, one completion, and no targeted WebRTC or Abort errors.
+- Reloads, damaged sessions, old save migration, idle messages, temporary offline state, fast double-clicks, locked replies, declined calls, failed calls, and early video closure are covered.
+- The suite currently contains 91 unit and integration tests.
+- The browser suite has 192 passing checks. Important story paths run in Chromium, Firefox, and WebKit.
+
+Run the normal checks with:
+
+```bash
+npm run test
+npm run typecheck
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+The live LTX test is separate because it spends credits:
+
+```bash
+npm run test:e2e:chapter2:live
+```
+
+Only run the live test when valid Reactor credentials are configured.
 
 ## Commands
 
-```bash
-npm run dev        # local development
-npm run build      # production-equivalent Next.js build
-npm run start      # serve the production build
-npm run lint       # ESLint
-npm run typecheck  # strict TypeScript
-npm run test       # Vitest unit + route-contract tests
-npm run test:e2e   # Playwright user journeys
-npm run secret     # generate SESSION_SECRET
-```
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Starts the local development server. |
+| `npm run build` | Creates a production build. |
+| `npm run start` | Runs the production build. |
+| `npm run test` | Runs the Vitest tests. |
+| `npm run test:e2e` | Runs the no-cost Playwright browser tests. |
+| `npm run test:e2e:chapter2:live` | Runs the paid live LTX checks. |
+| `npm run typecheck` | Checks TypeScript types. |
+| `npm run lint` | Runs ESLint. |
+| `npm run secret` | Generates a session secret. |
 
-Playwright covers desktop evidence, MSN group controls, reload restoration, corrupt-session recovery, all three complete routes, route-specific LTX completion, and webcam decline. Unit/integration tests enforce exactly 24 nodes, exactly three choices per node, valid graph links, unique choice IDs, 12-node playthroughs, three schema-valid LTX scripts, evidence locks, Director transitions, encryption/tamper rejection, route authorization, and idempotency.
+## Hosting notes
 
-## Deploying to Vercel
+This repository is ready to run locally and can be adapted to any Node-compatible host. It is not a static GitHub Pages project because the story state and Reactor credentials are handled through server API routes.
 
-1. Push the repository to a private or public Git provider.
-2. Import it in Vercel as a Next.js project.
-3. Add a newly generated `SESSION_SECRET` to Production, Preview, and Development.
-4. Keep `SLEEPLESS_LTX_MODE=mock` for a no-cost deploy, or add the Reactor credential and change it to `live`.
-5. Deploy. No database, WebSocket server, persistent backend, or asset CDN is required.
+Mock mode is the safe default for a public copy. A host that enables live Reactor performances must provide `SESSION_SECRET` and `REACTOR_API_KEY` as server-only environment variables. The included token endpoint limits repeated requests per performance, IP address, and server process. A large public launch should also use the host's durable rate limiting or abuse protection so limits remain consistent across multiple server instances.
 
-The narrative envelope is stateless, so normal serverless horizontal scaling works. Local token mint rate control is deliberately best-effort without external infrastructure; Reactor's scoped one-session token is the durable cost boundary.
+The app does not need a database for gameplay. A host may add a durable store if it wants account-level quotas or persistent live-generation limits.
 
 ## Troubleshooting
 
-- **No sound:** browsers gate audio until a gesture. Click the desktop or MSN, then use the tray speaker. If audio remains blocked, the story continues silently.
-- **Reactor waits before invitation:** this is expected while its session, upload, and conditions become ready. The invitation is intentionally impossible to show before readiness.
-- **Webcam generation fails:** the UI says the conversation could not be started, disconnects Reactor, records failure, and continues the authored text-only branch. It never claims video played when it did not.
-- **Recovered session cannot be read:** a changed `SESSION_SECRET`, expired/tampered envelope, or version mismatch invalidates it. Use **Start → Reset recovered computer**.
-- **Mobile is cramped:** rotate to landscape or use a larger screen. The desktop fills the available viewport.
+### There is no sound
 
-External APIs, prices, limits, and authentication shapes can change. The lockfile and installed SDK TypeScript declarations are authoritative; verify them before upgrading Reactor or the AI SDK.
+Your browser may block audio before you interact with the page. Select the desktop or MSN, then check the speaker in the system tray. The written story still works if audio remains blocked.
 
-## Asset note
+### The live video invitation takes a while
 
-The interface does not ship a copied Microsoft or MSN asset pack. Application icons use local SVG assets from the period-compatible, open-licensed [Nuvola](https://commons.wikimedia.org/wiki/Nuvola) and [Tango Desktop](https://commons.wikimedia.org/wiki/Tango_icons) families; their individual source files retain embedded metadata where provided. Windows/MSN-era geometry and sounds are recreated with original CSS and Web Audio synthesis. Product names are used only to establish the fictional period interface.
+Reactor needs time to start a session, upload the character image, and prepare the scene. The invitation appears only when the scene is ready.
 
-`beach_2005.jpg` is a real public-domain photograph of Daytona Beach uploaded in June 2005 by MrMiscellanious; its [Wikimedia Commons source and public-domain declaration](https://commons.wikimedia.org/wiki/File:Daytona-Beach-FL-1.JPG) are preserved here for provenance. It is stored locally rather than hotlinked.
+### A live video call fails
+
+The game closes the Reactor session and continues with written dialogue. It does not repeat the same scene or block the rest of the story.
+
+### A saved session cannot be opened
+
+This can happen after `SESSION_SECRET` changes, when a save was modified, or when the saved state is too old. Use the recovery option to start a clean session.
+
+### The desktop looks cramped
+
+Use a desktop browser or rotate the device to landscape. The interface fills the available viewport.
+
+## Assets and credits
+
+The story and characters are fictional. The character portraits are original project assets made for the mock and live performances.
+
+The interface does not contain a copied Windows or MSN asset pack. The local SVG icons come from the open-licensed [Nuvola](https://commons.wikimedia.org/wiki/Nuvola) and [Tango Desktop](https://commons.wikimedia.org/wiki/Tango_icons) icon families. The Windows XP and MSN layout is recreated with CSS. Interface sounds are generated with Web Audio.
+
+The desktop background is the Windows XP `Bliss` wallpaper photographed by Charles O'Rear. Copyright and related rights belong to their respective owner. It is included here only as part of the project's Windows XP setting and is not offered under the repository's code terms. Anyone redistributing or commercially hosting the project should confirm permission for that image or replace it with a properly licensed alternative.
+
+`beach_2005.jpg` is a public-domain photo of Daytona Beach uploaded in June 2005 by MrMiscellanious. The original file and its public-domain information are available on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Daytona-Beach-FL-1.JPG).
+
+Windows XP and MSN Messenger are referenced only as part of the fictional 2005 setting. Microsoft is not connected to, sponsoring, or endorsing this project. All related names and marks belong to their respective owners.
+
+## Project status
+
+Both chapters are complete and playable in mock mode and live mode. The current build includes all planned conversations, video scenes, files, choices, fallback behavior, and endings.
+
+This repository does not currently include an open-source license. The code and original assets are not licensed for reuse unless a license is added later.

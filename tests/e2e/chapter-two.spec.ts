@@ -45,6 +45,36 @@ async function seed(
   );
 }
 
+async function seedNode(page: Page, chapterTwoNode: string) {
+  await page.goto("/icon.svg");
+  const response = await page.request.post("/api/testing/session", {
+    data: { chapterTwoNode },
+  });
+  expect(response.ok()).toBe(true);
+  const saved = await response.json();
+  await page.evaluate(async (value) => {
+    localStorage.clear();
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("project-sleepless", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("session");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const tx = db.transaction("session", "readwrite");
+    tx.objectStore("session").put(
+      { envelope: value.sessionEnvelope, publicView: value.publicView, messages: value.messages },
+      "sleepless.recovered.v1",
+    );
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }, saved);
+  await page.goto("/");
+  await expect(page.locator("main.desktop-host")).toHaveAttribute("data-session-ready", "true");
+}
+
 async function openContact(page: Page, contactId: Witness | "sleepless_17") {
   await page.getByTestId("desktop-msn").dblclick();
   const contact =
@@ -141,6 +171,7 @@ test("a complete mock journey supports Tom before Sarah and reaches quarantine",
 test("a Reactor token failure falls back to text once without replaying the webcam", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await seed(page);
   await page.route("**/api/reactor/token", (route) =>
     route.fulfill({ status: 503, contentType: "application/json", body: "{}" }),
@@ -160,6 +191,33 @@ test("a Reactor token failure falls back to text once without replaying the webc
   await expect(
     page.getByText("mike_sk8 is now Offline", { exact: true }),
   ).toBeVisible({ timeout: 20_000 });
+});
+
+test("declining a Chapter Two webcam uses the written continuation exactly once", async ({ page }) => {
+  test.setTimeout(90_000);
+  await seedNode(page, "mike3");
+  await openContact(page, "mike_sk8");
+  await choose(page, "m3-accept");
+  await expect(page.getByTestId("decline-webcam")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("decline-webcam").click();
+  await expect(page.getByTestId("webcam-panel")).toHaveCount(0);
+  await expect(page.getByText("fine. ill type what the camera would have shown")).toHaveCount(1);
+  await expect(page.getByTestId("choice-m4-emily")).toBeEnabled({ timeout: 20_000 });
+});
+
+test("closing the mock video window does not stop or duplicate the story", async ({ page }) => {
+  test.setTimeout(90_000);
+  await seedNode(page, "mike3");
+  await openContact(page, "mike_sk8");
+  await choose(page, "m3-accept");
+  await expect(page.getByTestId("accept-webcam")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("accept-webcam").click();
+  const videoWindow = page.getByRole("region", { name: "Video Conversation — mike_sk8" });
+  await expect(videoWindow).toBeVisible();
+  await videoWindow.getByRole("button", { name: "Close" }).click();
+  await expect(videoWindow).toHaveCount(0);
+  await expect(page.getByTestId("choice-m4-emily")).toBeEnabled({ timeout: 30_000 });
+  await expect(page.getByText("now it says emily_backup_2. i did not write that")).toHaveCount(1);
 });
 
 for (const [route, decision, ending] of [

@@ -291,6 +291,10 @@ test("five idle prompts temporarily sign out without losing story progress", asy
   await reset(page);
   await openMsn(page);
   await choose(page, "s0-guarded");
+  // Wait for the authored turn and its IndexedDB persistence to finish before
+  // reading the saved envelope directly. WebKit can otherwise observe the
+  // previous s0 snapshot even though the click has already returned.
+  await expect(page.getByTestId("choice-s1-promise")).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("project-sleepless", 1);

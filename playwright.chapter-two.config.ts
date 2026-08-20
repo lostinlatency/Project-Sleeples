@@ -11,7 +11,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      "SLEEPLESS_TEST_HARNESS=1 SLEEPLESS_LTX_MODE=mock npm run dev -- -p 3100",
+      "SESSION_SECRET=playwright-chapter-two-secret SLEEPLESS_TEST_HARNESS=1 SLEEPLESS_LTX_MODE=mock npm run dev -- -p 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
   },

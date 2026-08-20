@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CHAPTER_TWO_REACTIONS,
   CHAPTER_TWO_STORY,
+  CONTACT_WEBCAM_SCRIPTS,
+  chapterTwoChoices,
   chapterTwoChoiceCallback,
 } from "@/content/server/chapter-two";
 import { createInitialState } from "@/lib/director/initial-state";
@@ -97,6 +99,111 @@ function reachFinal(
 }
 
 describe("chapter two story graph", () => {
+  it("executes every authored Chapter Two choice from a valid state", () => {
+    const allEvidence = [
+      "file_payload",
+      "file_fragment",
+      "warning_note",
+      "brb_readme",
+      "brb_users",
+      "sarah_log",
+      "emily_goodbye",
+      "contact_cache",
+      "tom_memory",
+      "mike_private",
+      "sarah_private",
+      "tom_private",
+      "truth_reveal",
+      "impersonation_reveal",
+      "silence_reveal",
+    ];
+
+    for (const node of Object.values(CHAPTER_TWO_STORY)) {
+      for (const choice of node.choices) {
+        const initial = chapterTwo("truth");
+        const state = StateSchema.parse({
+          ...initial,
+          phase: "normal",
+          discoveredFiles: allEvidence,
+          unlockedFiles: allEvidence,
+          chapterTwo: {
+            ...initial.chapterTwo,
+            stage: node.contactId === "sleepless_17" ? "final" : "interviews",
+            activeContact: node.contactId,
+            knownEvidence: allEvidence,
+            completedContacts: [],
+            contactThreads: {
+              ...initial.chapterTwo.contactThreads,
+              [node.contactId]: {
+                nodeId: node.id,
+                visited: [node.id],
+                choices: chapterTwoChoices(
+                  {
+                    ...initial,
+                    discoveredFiles: allEvidence,
+                    chapterTwo: {
+                      ...initial.chapterTwo,
+                      knownEvidence: allEvidence,
+                    },
+                  },
+                  node.id,
+                ),
+                opened: true,
+                completed: false,
+              },
+            },
+          },
+        });
+        const result = reduceNarrative(state, {
+          type: "CONTACT_CHOICE",
+          choiceId: choice.id,
+        });
+        if (choice.id.startsWith("final-")) {
+          expect(result.nextState.completed, choice.id).toBe(true);
+          expect(result.nextState.chapterTwo.finalDecision, choice.id).toBe(
+            choice.id.replace("final-", ""),
+          );
+          continue;
+        }
+        expect(result.authoredMessages[0]?.text, choice.id).toContain(
+          choice.label,
+        );
+        expect(result.authoredMessages[1]?.text, choice.id).toBe(
+          CHAPTER_TWO_REACTIONS[choice.id],
+        );
+        if (node.preparesWebcam) {
+          expect(result.nextState.phase, choice.id).toBe("webcam_preparing");
+          expect(result.shouldPrepareWebcam, choice.id).toBe(true);
+        } else if (node.completesContact) {
+          expect(
+            result.nextState.chapterTwo.completedContacts,
+            choice.id,
+          ).toContain(node.contactId);
+        } else if (choice.next) {
+          expect(
+            result.nextState.chapterTwo.contactThreads[node.contactId].nodeId,
+            choice.id,
+          ).toBe(choice.next);
+        }
+        expect(() => StateSchema.parse(result.nextState), choice.id).not.toThrow();
+      }
+    }
+  });
+
+  it("keeps all character performance scripts distinct and free of repeated sentences", () => {
+    const scripts = Object.entries(CONTACT_WEBCAM_SCRIPTS);
+    expect(scripts).toHaveLength(3);
+    expect(new Set(scripts.map(([, script]) => script)).size).toBe(3);
+    for (const [contactId, script] of scripts) {
+      const sentences = script
+        .split(/[.!?]+/)
+        .map((sentence) => sentence.trim().toLowerCase())
+        .filter(Boolean);
+      expect(new Set(sentences).size, contactId).toBe(sentences.length);
+      expect(script.length, contactId).toBeGreaterThan(60);
+    }
+  });
+
   it("uses the corrected one-way webcam premise", () => {
     expect(CHAPTER_TWO_STORY["c2-emily0"].lines).toBeDefined();
     expect(CHAPTER_TWO_STORY.mike4.lines).toContain(
@@ -186,6 +293,35 @@ describe("chapter two story graph", () => {
         "final",
       );
     }
+  });
+
+  it("certifies the complete route × transfer × witness-order × ending matrix", () => {
+    let journeys = 0;
+    for (const route of ["truth", "impersonation", "silence"] as const) {
+      for (const transfer of ["accepted", "declined", "inspected"] as const) {
+        for (const order of [
+          ["sarahlou_x", "tom_d"],
+          ["tom_d", "sarahlou_x"],
+        ] as const) {
+          for (const decision of ["quarantine", "release", "erase"] as const) {
+            const final = event(reachFinal(route, transfer, order), {
+              type: "CHAPTER_TWO_FINAL_DECISION",
+              decision,
+            });
+            expect(final.completed).toBe(true);
+            expect(final.chapterTwo.chapterOneOutcome).toBe(route);
+            expect(final.chapterTwo.fileTransferDecision).toBe(transfer);
+            expect(final.chapterTwo.finalDecision).toBe(decision);
+            expect(final.chapterTwo.completedContacts).toEqual(
+              expect.arrayContaining(["mike_sk8", "sarahlou_x", "tom_d"]),
+            );
+            expect(() => StateSchema.parse(final)).not.toThrow();
+            journeys++;
+          }
+        }
+      }
+    }
+    expect(journeys).toBe(54);
   });
 
   it("keeps the final witness visible until the player opens Emily's notification", () => {
@@ -286,15 +422,22 @@ describe("chapter two story graph", () => {
     ).toBe(false);
   });
 
-  it.each(["failure", "decline"] as const)(
-    "uses written fallback after LTX %s and advances exactly once",
-    (outcome) => {
+  it.each(
+    witnesses.flatMap((contactId) =>
+      (["success", "failure", "decline"] as const).map(
+        (outcome) => [contactId, outcome] as const,
+      ),
+    ),
+  )(
+    "advances %s exactly once after LTX %s",
+    (contactId, outcome) => {
       let state = event(chapterTwo(), {
         type: "FILE_TRANSFER_DECIDED",
         decision: "accepted",
       });
-      state = finishWitness(state, "mike_sk8", outcome);
-      expect(state.chapterTwo.completedContacts).toEqual(["mike_sk8"]);
+      if (contactId !== "mike_sk8") state = finishWitness(state, "mike_sk8");
+      state = finishWitness(state, contactId, outcome);
+      expect(state.chapterTwo.completedContacts).toContain(contactId);
       const replay = event(state, { type: "LTX_FAILED", reason: "stale" });
       expect(replay).toEqual(state);
     },

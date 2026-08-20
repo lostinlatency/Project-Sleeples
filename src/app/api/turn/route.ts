@@ -16,6 +16,8 @@ const Body = z.object({
 export async function POST(request: Request) {
   try {
     const body = Body.parse(await parseJson(request));
+    if (["FILE_OPENED", "EVIDENCE_INSPECTED"].includes(body.event.type))
+      throw new RequestError("EVENT_NOT_ALLOWED", 403);
     let state = await openState(body.sessionEnvelope);
     if (state.processedKeys.includes(body.idempotencyKey))
       return Response.json({
