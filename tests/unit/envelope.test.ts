@@ -25,10 +25,25 @@ describe("session envelope", () => {
   it("identifies an incompatible envelope version", async () => {
     const state = {
       ...createInitialState("a"),
-      version: 3,
+      version: 99,
     } as unknown as Parameters<typeof sealState>[0];
     await expect(openState(await sealState(state))).rejects.toThrow(
       "SESSION_VERSION",
     );
+  });
+  it("migrates version two story progress into the reactive desktop schema", async () => {
+    const current = createInitialState("legacy-v2");
+    const legacy = {
+      ...current,
+      version: 2,
+      reactiveDesktop: undefined,
+      playerBehavior: undefined,
+      story: { ...current.story, route: "truth" as const },
+    } as unknown as Parameters<typeof sealState>[0];
+    const opened = await openState(await sealState(legacy));
+    expect(opened.version).toBe(3);
+    expect(opened.story.route).toBe("truth");
+    expect(opened.reactiveDesktop.stage).toBe(0);
+    expect(opened.playerBehavior.fileOpenCounts).toEqual({});
   });
 });

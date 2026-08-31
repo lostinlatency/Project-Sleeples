@@ -1,13 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNarrative } from "@/components/system/NarrativeProvider";
-import { CONTACT_DISPLAY } from "@/content/server/chapter-two";
+import { CONTACT_DISPLAY } from "@/content/public/contact-display";
 import { CONTACTS } from "@/content/public/contacts";
 
 export function VideoConversation() {
-  const { webcamStream, sound, volume, view } = useNarrative();
+  const {
+    webcamStream,
+    sound,
+    volume,
+    view,
+    webcamScript,
+    webcamPlaying,
+    reactorMode,
+  } = useNarrative();
   const contactId = view?.activeContact ?? "sleepless_17";
   const contact = CONTACT_DISPLAY[contactId];
   const source = CONTACTS.find((item) => item.id === contactId);
@@ -15,6 +23,33 @@ export function VideoConversation() {
     (source && "avatar" in source && source.avatar) ||
     "/assets/avatars/sleepless_17.webp";
   const video = useRef<HTMLVideoElement>(null);
+  const [caption, setCaption] = useState("");
+  const [announced, setAnnounced] = useState("");
+  const live = Boolean(webcamStream);
+
+  useEffect(() => {
+    return () => {
+      webcamStream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [webcamStream]);
+
+  useEffect(() => {
+    if (!webcamScript || (!webcamPlaying && !live)) return;
+    const speed = live ? 30 : 14;
+    let shown = 0;
+    let lastAnnounce = 0;
+    const timer = setInterval(() => {
+      shown = Math.min(shown + 2, webcamScript.length);
+      const slice = webcamScript.slice(0, shown);
+      setCaption(slice);
+      if (shown - lastAnnounce >= 30 || shown >= webcamScript.length) {
+        lastAnnounce = shown;
+        setAnnounced(slice);
+      }
+      if (shown >= webcamScript.length) clearInterval(timer);
+    }, speed);
+    return () => clearInterval(timer);
+  }, [live, webcamPlaying, webcamScript]);
 
   useEffect(() => {
     const element = video.current;
@@ -63,8 +98,34 @@ export function VideoConversation() {
             <i />
           </div>
         ) : null}
+        {caption ? (
+          <div className="video-captions" data-testid="webcam-captions">
+            {caption}
+            {announced ? (
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                style={{
+                  position: "absolute",
+                  width: 1,
+                  height: 1,
+                  overflow: "hidden",
+                  clip: "rect(0 0 0 0)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {announced}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="video-status">
-          <span /> Connected — receiving video
+          <span />{" "}
+          {webcamStream
+            ? "Connected — receiving video"
+            : reactorMode === "mock"
+              ? "Simulated connection — mock video"
+              : "Connecting…"}
         </div>
         <div
           className="local-camera"

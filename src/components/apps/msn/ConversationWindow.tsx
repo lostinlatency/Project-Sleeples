@@ -1,17 +1,20 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNarrative } from "@/components/system/NarrativeProvider";
 import { XpIcon } from "@/components/desktop/XpIcon";
 import { playXpSound } from "@/lib/audio/synth";
 import { useDesktopStore } from "@/stores/desktop-store";
-import { CONTACT_DISPLAY } from "@/content/server/chapter-two";
+import { CONTACT_DISPLAY } from "@/content/public/contact-display";
 import { CONTACTS } from "@/content/public/contacts";
+
+const TYPING_LIMIT_MS = 45_000;
 
 export function ConversationWindow() {
   const {
     messages,
     typing,
+    typingContactId,
     view,
     invite,
     fileTransfer,
@@ -26,8 +29,11 @@ export function ConversationWindow() {
   const [nudging, setNudging] = useState(false);
   const transcript = useRef<HTMLDivElement>(null);
   const choiceLock = useRef(false);
+  const nudgeTimers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const chatIsActive = useDesktopStore(
-    (state) => state.activeWindowId === "msn-chat",
+    (state) =>
+      state.activeWindowId === "msn-chat" ||
+      (state.activeWindowId ?? "").startsWith("msn-chat-"),
   );
   const activeContact = view?.activeContact ?? "sleepless_17";
   const contact = CONTACT_DISPLAY[activeContact];
@@ -36,6 +42,12 @@ export function ConversationWindow() {
   useEffect(() => {
     transcript.current?.scrollTo({ top: transcript.current.scrollHeight });
   }, [visibleMessages.length, typing]);
+  useEffect(
+    () => () => {
+      for (const timer of nudgeTimers.current) clearTimeout(timer);
+    },
+    [],
+  );
   useEffect(() => {
     if (
       !chatIsActive ||
@@ -70,9 +82,20 @@ export function ConversationWindow() {
     setNudgeReady(false);
     setNudging(true);
     playXpSound("message");
-    setTimeout(() => setNudging(false), 420);
-    setTimeout(() => setNudgeReady(true), 10000);
+    nudgeTimers.current.push(setTimeout(() => setNudging(false), 420));
+    nudgeTimers.current.push(setTimeout(() => setNudgeReady(true), 10000));
   };
+  const gameInvite = view?.chapter === 1 && view?.flagsStatus === "offered";
+  const typingOffered =
+    view?.chapter === 1 && view?.typingTestStatus === "offered";
+  const gameButton =
+    view?.chapter === 1 &&
+    !view?.completed &&
+    view?.online &&
+    view?.flagsStatus !== "offered" &&
+    !["webcam_preparing", "webcam_invite", "webcam_active"].includes(
+      view?.phase ?? "",
+    );
   return (
     <div className={`msn-conversation ${nudging ? "nudge-shake" : ""}`}>
       <div className="conversation-content">
@@ -113,7 +136,10 @@ export function ConversationWindow() {
                 )}
               </div>
             ))}
-            {typing && <div className="typing">{contact.name} is typing...</div>}
+            {typing &&
+              typingContactId === activeContact && (
+                <div className="typing">{contact.name} is typing...</div>
+              )}
             {fileTransfer && (
               <FileTransfer
                 description={view?.fileOfferDescription ?? ""}
@@ -122,6 +148,7 @@ export function ConversationWindow() {
             )}
           </div>
           <div className="story-replies" aria-label="Choose Daniel's reply">
+            {typingOffered && <TypingTestBlock />}
             {view?.completed ? (
               <p className="story-ended">This conversation has ended.</p>
             ) : view?.choices?.length ? (
@@ -151,13 +178,26 @@ export function ConversationWindow() {
           </div>
           <div className="choice-foot">
             <span>{view?.chapter === 2 ? "Choose carefully · opened evidence changes what you can confront" : "Choose a reply · unlocked files may reveal stronger answers"}</span>
-            <button aria-label="Nudge" onClick={nudge} disabled={!nudgeReady}>⚡ Nudge</button>
+            <span className="foot-actions">
+              {gameButton && (
+                <button
+                  className="invite-game"
+                  aria-label="Invite to game"
+                  data-testid="invite-game"
+                  onClick={() => void sendEvent({ type: "GAME_INVITE_REQUESTED" })}
+                >
+                  <XpIcon name="games" size={14} /> Games ▸
+                </button>
+              )}
+              <button aria-label="Nudge" onClick={nudge} disabled={!nudgeReady}>⚡ Nudge</button>
+            </span>
           </div>
         </section>
         <aside className="display-pictures">
           <div className="picture-frame">
             <Image
               src={(avatar && "avatar" in avatar && avatar.avatar) || "/assets/avatars/sleepless_17.webp"}
+              className={activeContact === "sleepless_17" ? `emily-avatar ${view?.emilyAvatarVariant ?? "normal"}` : undefined}
               alt={`${contact.name} display picture`}
               fill
               sizes="112px"
@@ -169,6 +209,33 @@ export function ConversationWindow() {
           </div>
         </aside>
       </div>
+      {gameInvite && (
+        <div className="msn-invite" role="dialog" aria-modal="true" data-testid="game-invite">
+          <div className="invite-head">
+            <XpIcon name="games" size={18} />
+            <b>Game Invitation</b>
+          </div>
+          <p>
+            <strong>sleepless_17</strong> would like to play{" "}
+            <strong>Minesweeper Flags</strong>. First to 26 mines wins.
+          </p>
+          <div>
+            <button
+              data-testid="accept-game"
+              autoFocus
+              onClick={() => void sendEvent({ type: "GAME_INVITE_ACCEPTED" })}
+            >
+              Accept
+            </button>
+            <button
+              data-testid="decline-game"
+              onClick={() => void sendEvent({ type: "GAME_INVITE_DECLINED" })}
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      )}
       {invite && (
         <div className="msn-invite" role="dialog" aria-modal="true">
           <div className="invite-head">
@@ -181,6 +248,7 @@ export function ConversationWindow() {
           </p>
           <div>
             <button
+              autoFocus
               onClick={() => void acceptWebcam()}
               data-testid="accept-webcam"
             >
@@ -198,8 +266,75 @@ export function ConversationWindow() {
     </div>
   );
 }
-function FileTransfer({ description, onDecision }: { description: string; onDecision: (decision: "accepted" | "declined" | "inspected") => void }) {
+function TypingTestBlock() {
+  const { sendEvent } = useNarrative();
+  const [text, setText] = useState("");
+  const [left, setLeft] = useState(TYPING_LIMIT_MS / 1000);
+  const [submitted, setSubmitted] = useState(false);
+  const leftRef = useRef(TYPING_LIMIT_MS / 1000);
+  const settled = useRef(false);
+  const skip = useCallback(() => {
+    if (settled.current) return;
+    settled.current = true;
+    setSubmitted(true);
+    setLeft(0);
+    void sendEvent({ type: "TYPING_TEST_SKIPPED" });
+  }, [sendEvent]);
+  useEffect(() => {
+    if (settled.current) return;
+    const timer = setInterval(() => {
+      leftRef.current = Math.max(0, leftRef.current - 1);
+      setLeft(leftRef.current);
+      if (leftRef.current === 0 && !settled.current) {
+        settled.current = true;
+        setSubmitted(true);
+        void sendEvent({ type: "TYPING_TEST_SKIPPED" });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sendEvent]);
+  const submit = () => {
+    if (settled.current) return;
+    const trimmed = text.trim();
+    if (trimmed.length < 1) return;
+    settled.current = true;
+    setSubmitted(true);
+    void sendEvent({ type: "TYPING_TEST_SUBMITTED", text: trimmed.slice(0, 200) });
+  };
+  const tooLong = text.trim().length > 90;
   return (
+    <div className="typing-test" data-testid="typing-test">
+      <b>Prove it — type it like Daniel would</b>
+      <textarea
+        value={text}
+        onChange={(event) => setText(event.target.value.slice(0, 200))}
+        placeholder="lowercase. short. like he's half-asleep…"
+        aria-label="Type like Daniel"
+        spellCheck={false}
+        rows={2}
+      />
+      <div className="typing-test-foot">
+        <small className={left <= 10 ? "urgent" : undefined}>
+          {left}s · {text.trim().length} chars
+          {tooLong ? " · he never wrote essays" : ""}
+        </small>
+        <span>
+          <button onClick={skip} disabled={submitted || left === 0}>
+            Refuse
+          </button>
+          <button
+            data-testid="submit-typing"
+            onClick={submit}
+            disabled={!text.trim() || tooLong || submitted}
+          >
+            Send
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}
+function FileTransfer({ description, onDecision }: { description: string; onDecision: (decision: "accepted" | "declined" | "inspected") => void }) {  return (
     <div className="file-transfer chapter-two-transfer" role="dialog" aria-label="Incoming file transfer">
       <span>
         <XpIcon name="image-file" size={30} />

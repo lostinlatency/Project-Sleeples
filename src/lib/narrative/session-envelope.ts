@@ -33,8 +33,8 @@ export async function openState(token: string) {
     if (!raw || typeof raw !== "object" || !("version" in raw))
       throw new EnvelopeError("SESSION_INVALID");
     const version = (raw as { version: unknown }).version;
-    if (version === 2) return StateSchema.parse(raw);
-    if (version === 1) {
+    if (version === 3) return StateSchema.parse(raw);
+    if (version === 1 || version === 2) {
       const legacy = raw as Record<string, unknown>;
       const base = createInitialState(
         typeof legacy.sessionId === "string" ? legacy.sessionId : undefined,
@@ -42,9 +42,10 @@ export async function openState(token: string) {
       return StateSchema.parse({
         ...base,
         ...legacy,
-        version: 2,
-        chapter: 1,
-        chapterTwo: base.chapterTwo,
+        version: 3,
+        ...(version === 1 ? { chapter: 1, chapterTwo: base.chapterTwo } : {}),
+        reactiveDesktop: base.reactiveDesktop,
+        playerBehavior: base.playerBehavior,
       });
     }
     throw new EnvelopeError("SESSION_VERSION");

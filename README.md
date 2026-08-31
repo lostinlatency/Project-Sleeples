@@ -37,9 +37,12 @@ There are three final choices. The game does not label any of them as the correc
 - Two complete story chapters.
 - Four people you can talk to: Emily, Mike, Sarah, and Tom.
 - Three Chapter One paths: truth, impersonation, and silence.
-- Three ways to handle the file transfer at the start of Chapter Two.
+- A mid-conversation branch where Emily goes quiet, and how you handle it changes her tone.
+- A stylometry typing test that Emily offers on every path, not one.
+- Three ways to handle the file transfer at the start of Chapter Two — accepting it pays off later.
 - Mike, Sarah, and Tom can be questioned in different orders after the investigation opens up.
-- Three Chapter Two endings.
+- Three Chapter Two endings, plus a recovered `visitor_profile.dat` that records what the computer learned about you.
+- A private Night Log (Start menu) that remembers every completed night across sessions.
 - Replies that unlock after you inspect specific files.
 - Persistent conversations and choices after a page reload.
 - Windows XP folders, files, Notepad, image viewer, Start menu, taskbar, system tray, MSN contacts, notifications, and Nudge.
@@ -124,16 +127,15 @@ The browser saves an encrypted story envelope in IndexedDB. Reloading the page r
 
 ## Tests
 
-The current build has been checked in mock mode and live mode.
+The current release gate runs comprehensively in mock mode. Live LTX has a separate credential-gated test because it spends Reactor credits and depends on the external service.
 
 - All 123 written dialogue choices were selected through the browser interface.
 - 54 complete Chapter Two combinations were checked across the Chapter One history, file decision, witness order, and ending.
 - All nine combinations of the three Chapter One paths and three Chapter Two endings were checked.
-- Emily's three Chapter One performances, Mike, Sarah, and Tom were tested with live LTX.
-- The live tests check moving video, an active audio track, one token request, one completion, and no targeted WebRTC or Abort errors.
+- The optional live test checks moving video, an active audio track, one token request, one completion, and targeted WebRTC or Abort errors when valid Reactor credentials are available.
 - Reloads, damaged sessions, old save migration, idle messages, temporary offline state, fast double-clicks, locked replies, declined calls, failed calls, and early video closure are covered.
-- The suite currently contains 91 unit and integration tests.
-- The browser suite has 192 passing checks. Important story paths run in Chromium, Firefox, and WebKit.
+- The suite currently contains 147 unit and integration tests.
+- The browser release gate has 213 passing checks across Chromium, Firefox, and WebKit. An additional 258 choice-certification cases are intentionally skipped outside Chromium because that exhaustive matrix runs once rather than three times.
 
 Run the normal checks with:
 
@@ -203,7 +205,7 @@ The story and characters are fictional. The character portraits are original pro
 
 The interface does not contain a copied Windows or MSN asset pack. The local SVG icons come from the open-licensed [Nuvola](https://commons.wikimedia.org/wiki/Nuvola) and [Tango Desktop](https://commons.wikimedia.org/wiki/Tango_icons) icon families. The Windows XP and MSN layout is recreated with CSS. Interface sounds are generated with Web Audio.
 
-The desktop background is the Windows XP `Bliss` wallpaper photographed by Charles O'Rear. Copyright and related rights belong to their respective owner. It is included here only as part of the project's Windows XP setting and is not offered under the repository's code terms. Anyone redistributing or commercially hosting the project should confirm permission for that image or replace it with a properly licensed alternative.
+The desktop background is an original procedural recreation — layered CSS gradients with an inline SVG flag composition painted to evoke the classic XP desktop without reproducing the original photograph. No third-party image is used for the wallpaper. The composition shifts tone with the story's exposure stages.
 
 `beach_2005.jpg` is a public-domain photo of Daytona Beach uploaded in June 2005 by MrMiscellanious. The original file and its public-domain information are available on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Daytona-Beach-FL-1.JPG).
 
@@ -213,4 +215,22 @@ Windows XP and MSN Messenger are referenced only as part of the fictional 2005 s
 
 Both chapters are complete and playable in mock mode and live mode. The current build includes all planned conversations, video scenes, files, choices, fallback behavior, and endings.
 
-This repository does not currently include an open-source license. The code and original assets are not licensed for reuse unless a license is added later.
+## License
+
+The source code is MIT-licensed. The original story and assets are CC BY-NC-SA 4.0. See [LICENSE](LICENSE) for the full terms.
+
+## Sharing the game
+
+The fastest way to get the game played is a hosted URL in mock mode — it needs no API key and spends nothing:
+
+1. Deploy to any Node-compatible host (Vercel, Fly.io, Railway) with `SESSION_SECRET` set and `SLEEPLESS_LTX_MODE=mock`.
+2. Create an [itch.io](https://itch.io) project and either:
+   - link the hosted URL as a downloadable/external item, or
+   - wrap the app with [Tauri](https://tauri.app) (it bundles the Node server and runs as a desktop download).
+3. Keep `REACTOR_API_KEY` unset for public builds. Live video is for private runs where spending credits is acceptable.
+
+Large media (`public/demo/`) now routes through Git LFS via `.gitattributes`; existing clones should run `git lfs install` after pulling.
+
+## Continuous integration
+
+GitHub Actions runs the full gate on every push and pull request to `main`: typecheck, lint, unit tests, production build, and the Playwright suite on Chromium, Firefox, and WebKit. The paid live-LTX check is never run in CI.

@@ -7,7 +7,6 @@ import { useNarrative } from "@/components/system/NarrativeProvider";
 import { playXpSound } from "@/lib/audio/synth";
 import { XpIcon } from "@/components/desktop/XpIcon";
 import type { ContactId } from "@/lib/director/types";
-import { useDesktopStore } from "@/stores/desktop-store";
 
 export function ContactList() {
   const { sendEvent, view } = useNarrative();
@@ -17,12 +16,9 @@ export function ContactList() {
     playXpSound("sign-in");
   }, []);
   const openContact = (contactId: ContactId) => {
-    const contact = CONTACTS.find((item) => item.id === contactId)!;
+    const contact = CONTACTS.find((item) => item.id === contactId);
+    if (!contact) return;
     openApp("msn-chat", `${contact.name} - Conversation`, { contactId });
-    useDesktopStore.getState().updateWindow("msn-chat", {
-      title: `${contact.name} - Conversation`,
-      payload: { contactId },
-    });
     if (view?.chapter === 2)
       void sendEvent({ type: "CONTACT_OPENED", contactId });
     else if (contactId === "sleepless_17") {
@@ -54,7 +50,13 @@ export function ContactList() {
           <p>moving soon. maybe.</p>
         </div>
       </div>
-      <div className="contact-search">Find a contact or number</div>
+      <input
+        className="contact-search"
+        type="text"
+        placeholder="Find a contact or number"
+        aria-label="Find a contact or number"
+        disabled
+      />
       <div className="contacts">
         <button
           className="contact-group"
@@ -78,7 +80,7 @@ export function ContactList() {
             >
               <span className="presence">●</span>
               {"avatar" in contact ? (
-                <Image src={contact.avatar} alt="" width={30} height={30} />
+                <Image className={contact.id === "sleepless_17" ? `emily-avatar ${view?.emilyAvatarVariant ?? "normal"}` : undefined} src={contact.avatar} alt="" width={30} height={30} />
               ) : (
                 <span className="blank-avatar">?</span>
               )}
@@ -88,6 +90,13 @@ export function ContactList() {
               </span>
             </button>
           ))}
+        {onlineOpen && view?.finalDecision === "release" ? (
+          <div className="contact online brb-unknown-contact" data-testid="contact-unknown-visitor">
+            <span className="presence">●</span>
+            <Image className="emily-avatar unknown" src="/assets/avatars/sleepless_17.webp" alt="" width={30} height={30} />
+            <span><b>unknown_visitor</b><small> — im not waiting anymore</small></span>
+          </div>
+        ) : null}
         <button
           className="contact-group"
           onClick={() => setOfflineOpen((value) => !value)}

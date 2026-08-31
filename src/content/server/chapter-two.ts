@@ -557,7 +557,7 @@ export const CONTACT_COMPLETION: Record<
   },
 };
 
-const POST_WEBCAM_NODE: Record<"mike_sk8" | "sarahlou_x" | "tom_d", string> = {
+export const POST_WEBCAM_NODE: Record<"mike_sk8" | "sarahlou_x" | "tom_d", string> = {
   mike_sk8: "mike4",
   sarahlou_x: "sarah4",
   tom_d: "tom4",
@@ -568,12 +568,14 @@ export function postWebcamNode(contactId: "mike_sk8" | "sarahlou_x" | "tom_d") {
 }
 
 export function chapterTwoChoiceCallback(
-  state: Pick<NarrativeState, "story">,
+  state: Pick<NarrativeState, "story" | "flagsGame">,
   contactId: ContactId,
 ) {
   const history = state.story.choiceHistory;
   const has = (id: string) => history.includes(id);
   if (contactId === "mike_sk8") {
+    if (state.flagsGame.outcome === "visitor_won")
+      return "em said u beat her at flags. daniel went 0 for 41. i watched him lose every single time";
     if (has("s3-photo")) return "u knew exactly what was in the beach photo. daniel never put that description in brb";
     if (has("l2-love")) return "u told em u loved her. daniel never saved that answer in brb";
     if (has("a3-silence")) return "em said u answered with three dots. daniel did that when he was hiding something";
@@ -582,6 +584,10 @@ export function chapterTwoChoiceCallback(
     return "em said u stayed without telling her who u were. thats more than daniel managed";
   }
   if (contactId === "sarahlou_x") {
+    if (state.flagsGame.outcome === "visitor_won")
+      return "em says u won at flags. she only ever won against daniel. she thinks thats funny now. i dont";
+    if (state.flagsGame.outcome === "visitor_lost")
+      return "em told me u played flags with her. she said losing to u felt like having him back";
     if (has("t2-note")) return "u showed em the line about getting too attached. she never knew daniel wrote that";
     if (has("l3-blame")) return "u told her she was watching too closely. thats something daniel used to say when cornered";
     if (has("a1-comfort")) return "u promised not to disappear without saying it. remember that before u promise her anything else";
@@ -590,6 +596,8 @@ export function chapterTwoChoiceCallback(
     return "she let u stay silent because silence was still company to her";
   }
   if (contactId === "tom_d") {
+    if (state.flagsGame.outcome === "visitor_won")
+      return "em beat daniel at flags 41 straight times. she says u won. i dont know what to do with that";
     if (has("t5-carry")) return "u promised to make sure daniel hears her. im the closest thing to a way of doing that";
     if (has("l5-double")) return "u kept pretending after she caught u. dont try it with me";
     if (has("a5-goodbye")) return "u gave her the goodbye daniel couldnt. that matters even if none of this is her";
@@ -642,19 +650,112 @@ export const CONTACT_WEBCAM_SCRIPTS: Record<
     "Watch the light on the computer case. It flashes once, then twice, then once again. Those are your choices, aren't they? Emily didn't send you the file. It prepared itself while you were talking.",
 };
 
-export const CONTACT_DISPLAY: Record<
-  ContactId,
-  { name: string; line: string; initial: string }
+export function contactWebcamScript(
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  state: NarrativeState,
+) {
+  const base = CONTACT_WEBCAM_SCRIPTS[contactId];
+  const trust = state.chapterTwo.contactTrust[contactId];
+  const additions: string[] = [];
+  if (trust <= -2)
+    additions.push("I almost didn't turn the camera on for you.");
+  if (trust >= 2)
+    additions.push("And thank you. For not making this harder than it already is.");
+  if (contactId === "mike_sk8" && state.chapterTwo.fileTransferDecision === "declined")
+    additions.push(
+      "There is a piece of the file you refused sitting in that folder. Don't open it while I'm watching.",
+    );
+  if (state.chapterTwo.exposureStage >= 4)
+    additions.push("It is faster tonight. It learns between sentences now.");
+  return additions.length ? `${base} ${additions.slice(0, 2).join(" ")}` : base;
+}
+
+export function witnessAside(
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  state: NarrativeState,
+): string | null {
+  if (state.notices.includes(`aside-${contactId}`)) return null;
+  if (contactId === "mike_sk8" && state.beliefs.userIsDaniel <= 0.2)
+    return "u told her straight away who u were. that buys u one honest answer from me";
+  if (contactId === "sarahlou_x" && state.beliefs.abandonmentFear >= 0.55)
+    return "she kept checking if u were still typing tonight. i heard the window chime every time";
+  if (contactId === "tom_d" && state.beliefs.trust <= 0.35)
+    return "she stopped trusting the voice near the end. dont take it personally. it was never u she stopped trusting";
+  return null;
+}
+
+// Mid-conversation reactions when a witness sees you open their evidence,
+// voiced per character profile: Mike deflects with dry jokes then goes blunt,
+// Sarah corrects framing carefully without jokes, Tom is measured and rehearsed.
+export const WITNESS_FILE_REACTIONS: Record<
+  "mike_sk8" | "sarahlou_x" | "tom_d",
+  Record<string, string>
 > = {
-  sleepless_17: { name: "sleepless_17", line: "awake again", initial: "E" },
-  mike_sk8: { name: "mike_sk8", line: "dont close msn", initial: "M" },
-  sarahlou_x: {
-    name: "sarahlou_x",
-    line: "remember this for me",
-    initial: "S",
+  mike_sk8: {
+    brb_readme:
+      "you actually read the readme. most people just ran the thing and acted shocked later",
+    brb_users:
+      "three thousand lines from em. yeah. i stopped counting after the first thousand",
+    file_fragment:
+      "that fragment is the piece i never wanted to see again. good. look at it properly",
+    payload_quarantine:
+      "you ACCEPTED that thing? and its renaming itself in your folder. great. thats great",
+    tom_memory:
+      "kids stuff in there. it learns kids stuff. let that sit for a second",
   },
-  tom_d: { name: "tom_d", line: "last person online", initial: "T" },
+  sarahlou_x: {
+    sarah_log:
+      "careful with that log. the timestamps are right but the voice isnt hers",
+    emily_goodbye:
+      "the goodbye is real. what came after is the part nobody agrees on",
+    contact_cache:
+      "dont say copies around tom. he stops talking. im telling you before you learn that the hard way",
+    payload_quarantine:
+      "you kept it. em would have kept it too. thats what worries me",
+    sarah_private:
+      "you read the page she made me promise about. im deciding to trust you with that",
+  },
+  tom_d: {
+    tom_memory:
+      "the singing is word for word how it happened. i checked for twenty years",
+    tom_private:
+      "october eighteenth, two in the morning. the record holds the dates. it never explains them",
+    mike_private:
+      "mike never told me any of that. thats the part i cant get past",
+    payload_quarantine:
+      "it renamed the file? then containing it was never going to work. im sorry",
+    brb_final:
+      "if that file says what i think it says, then erasing it was never going to be enough",
+  },
 };
+
+export function witnessFileReaction(
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  evidenceId: string,
+): string | null {
+  return WITNESS_FILE_REACTIONS[contactId][evidenceId] ?? null;
+}
+
+export function witnessTrustLine(
+  contactId: "mike_sk8" | "sarahlou_x" | "tom_d",
+  direction: "high" | "low",
+): string | null {
+  const lines = {
+    mike_sk8: {
+      high: "fine. you get the uncensored version from now on",
+      low: "im done talking about the cd. figure the rest out yourself",
+    },
+    sarahlou_x: {
+      high: "i dont tell people things. dont make me regret this one",
+      low: "i think we're finished here. the logs say it better than i can",
+    },
+    tom_d: {
+      high: "you listen the way daniel never did. i dont say that lightly",
+      low: "i've said everything i'm going to say. the rest is in the files",
+    },
+  } as const;
+  return lines[contactId][direction];
+}
 
 export function chapterTwoChoices(
   state: NarrativeState,

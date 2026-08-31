@@ -13,6 +13,12 @@ const Body = z.object({
   stage: z.enum(["file_offer", "final"]).default("file_offer"),
   chapterOneNode: z.string().optional(),
   chapterTwoNode: z.string().optional(),
+  sessionId: z.string().optional(),
+  typingOffered: z.boolean().optional(),
+  flagsPlaying: z.boolean().optional(),
+  flagsOutcome: z
+    .enum(["visitor_won", "visitor_lost", "visitor_quit"])
+    .optional(),
 });
 
 const allEvidence = [
@@ -43,7 +49,7 @@ export async function POST(request: Request) {
   )
     return Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
   const input = Body.parse(await request.json());
-  const initial = createInitialState(`e2e-${crypto.randomUUID()}`);
+  const initial = createInitialState(input.sessionId ?? `e2e-${crypto.randomUUID()}`);
   if (input.chapterOneNode) {
     const node = STORY[input.chapterOneNode];
     if (!node)
@@ -62,6 +68,35 @@ export async function POST(request: Request) {
       phase: route === "undecided" ? "normal" : "identity_suspicion",
       discoveredFiles: allEvidence,
       unlockedFiles: allEvidence,
+      ...(input.typingOffered
+        ? { typingTest: { status: "offered" as const, score: 0 } }
+        : {}),
+      ...(input.flagsPlaying
+        ? {
+            flagsGame: {
+              status: "playing" as const,
+              outcome: "pending" as const,
+              visitorMines: 0,
+              emilyMines: 0,
+              turns: 0,
+              round: 0,
+            },
+            notices: ["flags-offered", "flags-firstgame"],
+          }
+        : {}),
+      ...(input.flagsOutcome
+        ? {
+            flagsGame: {
+              status: "done" as const,
+              outcome: input.flagsOutcome,
+              visitorMines: 26,
+              emilyMines: 12,
+              turns: 38,
+              round: 1,
+            },
+            notices: ["flags-offered", "flags-firstgame"],
+          }
+        : {}),
       story: {
         ...initial.story,
         nodeId: node.id,
@@ -82,6 +117,7 @@ export async function POST(request: Request) {
       sessionEnvelope: await sealState(base),
       publicView: publicView(base),
       messages,
+      sessionId: base.sessionId,
     });
   }
   if (input.chapterTwoNode) {
@@ -96,6 +132,19 @@ export async function POST(request: Request) {
       phase: "normal",
       discoveredFiles: allEvidence,
       unlockedFiles: allEvidence,
+      ...(input.flagsOutcome
+        ? {
+            flagsGame: {
+              status: "done" as const,
+              outcome: input.flagsOutcome,
+              visitorMines: 26,
+              emilyMines: 12,
+              turns: 38,
+              round: 1,
+            },
+            notices: ["flags-offered", "flags-firstgame"],
+          }
+        : {}),
       story: { ...initial.story, route: input.route, choices: [] },
       chapterTwo: {
         ...initial.chapterTwo,

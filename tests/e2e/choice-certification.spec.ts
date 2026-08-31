@@ -130,7 +130,9 @@ for (const node of Object.values(CHAPTER_TWO_STORY)) {
       await button.click();
       if (!choice.id.startsWith("final-"))
         await expect(
-          page.getByText(CHAPTER_TWO_REACTIONS[choice.id], { exact: true }),
+          page
+            .getByTestId("transcript")
+            .getByText(CHAPTER_TWO_REACTIONS[choice.id], { exact: true }),
         ).toBeVisible({ timeout: 15_000 });
       await chapterTwoExpectation(page, node, choice);
     });

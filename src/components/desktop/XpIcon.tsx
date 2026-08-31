@@ -81,10 +81,14 @@ export const APP_ICONS: Record<AppKind, XpIconName> = {
   notepad: "notepad",
   image: "image",
   playlist: "playlist",
+  "media-player": "playlist",
   "msn-contacts": "msn",
   "msn-chat": "msn",
   "msn-video": "webcam",
   recycle: "recycle",
+  game: "games",
+  pinball: "games",
+  nightlog: "notepad",
 };
 
 export function XpIcon({
@@ -98,10 +102,11 @@ export function XpIcon({
   className?: string;
   priority?: boolean;
 }) {
+  const src = ICONS[name] ?? ICONS.text;
   return (
     <Image
       className={`xp-svg-icon ${className}`}
-      src={ICONS[name]}
+      src={src}
       alt=""
       width={size}
       height={size}

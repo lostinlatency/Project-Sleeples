@@ -38,8 +38,8 @@ function followFirstAvailable(
 }
 
 describe("authored story director", () => {
-  it("contains exactly 24 dialogue nodes and every node has three choices", () => {
-    expect(STORY_NODE_COUNT).toBe(24);
+  it("contains exactly 26 dialogue nodes and every node has three choices", () => {
+    expect(STORY_NODE_COUNT).toBe(26);
     for (const node of Object.values(STORY))
       expect(node.choices).toHaveLength(3);
   });

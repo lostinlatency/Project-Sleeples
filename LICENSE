@@ -1,0 +1,47 @@
+Project Sleepless — dual license
+
+1. Source code
+
+All source code in this repository (the `src/`, `tests/`, and configuration
+files) is released under the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+2. Original assets and story
+
+The story text, character portraits (public/assets/avatars/), demo media
+(public/demo/), and other original creative assets are licensed under the
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+License (CC BY-NC-SA 4.0):
+
+    https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+You may share and adapt these assets for non-commercial purposes with
+attribution and share-alike terms. Commercial use of the assets or the
+story requires separate permission from the author.
+
+3. Third-party material
+
+- Interface icons come from the open-licensed Nuvola and Tango Desktop icon
+  families (see README "Assets and credits").
+- `beach_2005.jpg` is a public-domain photograph from Wikimedia Commons.
+- Windows, MSN Messenger, and related marks belong to Microsoft. They are
+  referenced only as part of the fictional 2005 setting. Microsoft is not
+  connected to, sponsoring, or endorsing this project.

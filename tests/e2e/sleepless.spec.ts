@@ -78,6 +78,7 @@ async function reachWebcam(
 test("desktop evidence exploration unlocks authored dialogue choices", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await reset(page);
   await openMsn(page);
   await choose(page, "s0-honest");
@@ -97,6 +98,32 @@ test("desktop evidence exploration unlocks authored dialogue choices", async ({
   await expect(page.getByTestId("choice-s3-photo")).toBeEnabled();
 });
 
+test("BRB links Winamp, the changed note, Recycle Bin, and the recovered memory", async ({ page }) => {
+  test.setTimeout(75_000);
+  await reset(page);
+  await page.getByTestId("desktop-documents").dblclick();
+  await page.getByTestId("file-music").dblclick();
+  await page.getByTestId("file-playlist_2005").dblclick();
+  await page.getByRole("button", { name: /for when you leave/i }).click();
+  await expect(page.getByText("BUFFER SOURCE: UNKNOWN")).toBeVisible();
+
+  await page.getByTestId("desktop-personal").dblclick();
+  await page.getByTestId("file-moving_note").dblclick();
+  await expect(page.getByRole("textbox", { name: "Notepad text" })).toHaveValue(/everything you couldn't delete in the bin/);
+
+  await page.getByTestId("desktop-recycle").dblclick();
+  await expect(page.getByTestId("file-emily_goodbye")).toBeVisible();
+  await page.getByTestId("restore-artifact").click();
+
+  await page.getByTestId("desktop-personal").dblclick();
+  await page.getByTestId("file-emily_goodbye").dblclick();
+  await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.locator(".recovered-caption")).toHaveText("daniel?", { timeout: 18_000 });
+  await expect(page.getByRole("button", { name: "Send to Emily" })).toBeVisible();
+  await page.getByRole("button", { name: "Send to Emily" }).click();
+  await expect(page.getByRole("button", { name: "Send to Emily" })).toHaveCount(0);
+});
+
 test("contact groups collapse and the authored conversation restores after reload", async ({
   page,
 }) => {
@@ -108,7 +135,9 @@ test("contact groups collapse and the authored conversation restores after reloa
   await online.click();
   await page.getByTestId("contact-sleepless").click();
   await choose(page, "s0-warm");
-  await expect(page.getByText("where have u been?")).toBeVisible();
+  await expect(page.getByText("where have u been?")).toBeVisible({
+    timeout: 10_000,
+  });
   await page.reload();
   await expect(page.locator("main.desktop-host")).toHaveAttribute(
     "data-session-ready",

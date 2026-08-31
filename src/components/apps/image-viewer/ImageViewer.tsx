@@ -16,6 +16,12 @@ export function ImageViewer({ payload }: { payload?: Record<string, string> }) {
           <p>This picture is unavailable.</p>
         )}
       </div>
+      {payload?.caption || payload?.meta ? (
+        <div className="viewer-caption" data-testid="viewer-caption">
+          {payload?.caption ? <p>{payload.caption}</p> : null}
+          {payload?.meta ? <small>{payload.meta}</small> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

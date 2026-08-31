@@ -1,5 +1,7 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { openApp, useDesktopStore } from "@/stores/desktop-store";
+import { useNarrative } from "@/components/system/NarrativeProvider";
 import { XpIcon, type XpIconName } from "./XpIcon";
 
 export function StartMenu({
@@ -9,9 +11,47 @@ export function StartMenu({
 }) {
   const open = useDesktopStore((s) => s.startMenuOpen);
   const close = useDesktopStore((s) => s.closeStart);
+  const { sendEvent } = useNarrative();
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>(".start-item")
+      ?.focus();
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const items = Array.from(
+        menuRef.current?.querySelectorAll<HTMLButtonElement>(".start-item") ??
+          [],
+      );
+      if (!items.length) return;
+      event.preventDefault();
+      const currentIndex = items.indexOf(
+        document.activeElement as HTMLButtonElement,
+      );
+      const start =
+        currentIndex < 0
+          ? event.key === "ArrowUp"
+            ? items.length
+            : -1
+          : currentIndex;
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      const next = items[(start + step + items.length) % items.length];
+      next?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, close]);
   if (!open) return null;
   return (
-    <div className="start-menu" role="menu">
+    <div ref={menuRef} className="start-menu" role="menu">
       <div className="start-user">
         <span className="user-tile">D</span>
         <strong>Daniel</strong>
@@ -45,6 +85,15 @@ export function StartMenu({
               openApp("notepad", "Untitled - Notepad", { content: "" })
             }
           />
+          <Menu
+            label="Games"
+            detail="3D Pinball — Space Cadet"
+            icon="games"
+            onClick={() => {
+              openApp("pinball", "3D Pinball for Windows - Space Cadet");
+              void sendEvent({ type: "PINBALL_OPENED" });
+            }}
+          />
         </div>
         <div className="start-secondary">
           <Menu
@@ -76,6 +125,11 @@ export function StartMenu({
             label="Search"
             icon="search"
             onClick={() => alert("Search Companion could not start.")}
+          />
+          <Menu
+            label="Night Log"
+            icon="notepad"
+            onClick={() => openApp("nightlog", "Night Log")}
           />
         </div>
       </div>
@@ -123,6 +177,7 @@ function Menu({
     computer: "computer",
     control: "control",
     search: "search",
+    games: "games",
   };
   return (
     <button

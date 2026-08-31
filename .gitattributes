@@ -1,0 +1,6 @@
+# Future large media (demo video, GIFs, trace captures) should enter the
+# repository through Git LFS. The 45 MB demo clip in public/demo predates LFS
+# adoption; new media must use these rules.
+public/demo/*.mp4 filter=lfs diff=lfs merge=lfs -text
+public/demo/*.gif filter=lfs diff=lfs merge=lfs -text
+captures/** filter=lfs diff=lfs merge=lfs -text

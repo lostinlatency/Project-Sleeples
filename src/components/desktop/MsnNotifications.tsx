@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type MsnNotification,
   useNarrative,
@@ -41,6 +41,7 @@ function NotificationCard({
 }) {
   const [closing, setClosing] = useState(false);
   const contact = CONTACTS.find((item) => item.id === notification.contactId);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (notification.kind === "message") return;
     const beginClose = setTimeout(() => setClosing(true), 9_000);
@@ -50,9 +51,16 @@ function NotificationCard({
       clearTimeout(remove);
     };
   }, [notification.id, notification.kind, notification.text, onDismiss]);
+  useEffect(
+    () => () => {
+      if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    },
+    [],
+  );
   const dismiss = () => {
     setClosing(true);
-    setTimeout(() => onDismiss(notification.id), 180);
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    dismissTimer.current = setTimeout(() => onDismiss(notification.id), 180);
   };
   return (
     <section
@@ -69,7 +77,9 @@ function NotificationCard({
       </header>
       <button
         className="notification-body"
-        onClick={() => void onOpen(notification)}
+        onClick={() => {
+          void onOpen(notification).catch(() => {});
+        }}
       >
         {contact && "avatar" in contact ? (
           <Image src={contact.avatar} alt="" width={42} height={42} />

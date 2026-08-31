@@ -83,6 +83,29 @@ for (const liveCase of cases) {
     ).toBeGreaterThan(0);
     await expect.poll(
       () => video.evaluate((element) => {
+        const source = element as HTMLVideoElement;
+        if (source.videoWidth === 0 || source.videoHeight === 0) return 0;
+        const canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 18;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) return 0;
+        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let peak = 0;
+        for (let index = 0; index < pixels.length; index += 4) {
+          const luminance =
+            pixels[index] * 0.2126 +
+            pixels[index + 1] * 0.7152 +
+            pixels[index + 2] * 0.0722;
+          peak = Math.max(peak, luminance);
+        }
+        return peak;
+      }),
+      { timeout: 180_000 },
+    ).toBeGreaterThan(20);
+    await expect.poll(
+      () => video.evaluate((element) => {
         const stream = (element as HTMLVideoElement).srcObject as MediaStream | null;
         return stream?.getAudioTracks().filter((track) => track.readyState === "live").length ?? 0;
       }),

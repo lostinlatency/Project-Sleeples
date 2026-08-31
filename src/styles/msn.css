@@ -343,7 +343,17 @@
 .story-ended,.story-waiting { margin: 0;text-align:center;color:#697786;font-style:italic; }
 .choice-foot {height:27px;display:flex;align-items:center;gap:8px;color:#718092;font-size:9px;}
 .choice-foot span {flex:1;}
+.choice-foot .foot-actions {flex:0 0 auto;display:flex;align-items:center;gap:6px;}
+.choice-foot .invite-game {display:inline-flex;align-items:center;gap:4px;padding:0 8px;}
 .choice-foot button {height:21px;border:1px solid #8796a7;background:linear-gradient(#fff,#e0e8f0);}
+.typing-test {border:1px solid #8fa3bb;background:#f4f8fc;padding:7px 9px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+.typing-test b {font-size:11px;color:#2b3c50;}
+.typing-test textarea {resize:none;border:1px inset #b9c6d5;font:12px/1.4 Tahoma,sans-serif;padding:5px;background:#fff;}
+.typing-test-foot {display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.typing-test-foot small {color:#718092;}
+.typing-test-foot small.urgent {color:#a4141a;font-weight:bold;}
+.typing-test-foot button {height:21px;border:1px solid #8796a7;background:linear-gradient(#fff,#e0e8f0);padding:0 10px;}
+.typing-test-foot button:disabled {color:#9aa7b5;}
 .display-pictures {
   width: 124px;
   display: flex;
@@ -484,6 +494,21 @@
   border-radius: 50%;
   background: #63c846;
   box-shadow: 0 0 5px #63c846;
+}
+.video-captions {
+  position: absolute;
+  z-index: 4;
+  left: 8%;
+  right: 8%;
+  bottom: 5.5%;
+  padding: 7px 11px;
+  background: rgba(8, 12, 10, 0.66);
+  color: #e6eee2;
+  font-size: 13px;
+  line-height: 1.45;
+  text-shadow: 1px 1px #000;
+  border: 1px solid rgba(214, 227, 210, 0.22);
+  pointer-events: none;
 }
 .video-stage:after {
   content: "";

@@ -26,8 +26,10 @@ import {
   normalizeSavedPublicView,
 } from "@/lib/narrative/client-persistence";
 import { typingDuration } from "@/lib/timing/delivery";
+import { recordNightLogEntry } from "@/lib/narrative/night-log";
 import { openApp, useDesktopStore } from "@/stores/desktop-store";
-import { setXpVolume } from "@/lib/audio/synth";
+import { playXpSound, setXpVolume } from "@/lib/audio/synth";
+import { performancePromptFor } from "@/lib/reactor/constants";
 const LtxBridge = dynamic(
   () => import("@/lib/reactor/LtxBridge").then((m) => m.LtxBridge),
   { ssr: false },
@@ -39,6 +41,8 @@ type OpenFile = {
   content?: string;
   assetUrl?: string;
   corrupted?: boolean;
+  caption?: string;
+  meta?: string;
 };
 export interface MsnNotification {
   id: string;
@@ -51,6 +55,7 @@ interface NarrativeContextValue {
   view: PublicView | null;
   messages: DeliveredMessage[];
   typing: boolean;
+  typingContactId: ContactId | string | null;
   busy: boolean;
   sessionError: boolean;
   invite: boolean;
@@ -58,6 +63,7 @@ interface NarrativeContextValue {
   webcamPlaying: boolean;
   webcamScript: string | null;
   webcamStream: MediaStream | null;
+  reactorMode: "mock" | "live";
   sound: boolean;
   volume: number;
   notifications: MsnNotification[];
@@ -87,12 +93,16 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<DeliveredMessage[]>([]);
   const [ready, setReady] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [typingContactId, setTypingContactId] = useState<
+    ContactId | string | null
+  >(null);
   const [busy, setBusy] = useState(false);
   const [sessionError, setSessionError] = useState(false);
   const [invite, setInvite] = useState(false);
   const [fileTransfer, setFileTransfer] = useState(false);
   const [webcamPlaying, setWebcamPlaying] = useState(false);
   const [webcamScript, setWebcamScript] = useState<string | null>(null);
+  const [webcamPerformanceNotes, setWebcamPerformanceNotes] = useState("");
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
   const [reactorToken, setReactorToken] = useState<string | null>(null);
   const [reactorMode, setReactorMode] = useState<"mock" | "live">("mock");
@@ -103,7 +113,6 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const envelopeRef = useRef("");
   const viewRef = useRef<PublicView | null>(null);
   const messagesRef = useRef<DeliveredMessage[]>([]);
-  const audioCtx = useRef<AudioContext | null>(null);
   const requestChain = useRef<Promise<void>>(Promise.resolve());
   const webcamLock = useRef(false);
   const completionLock = useRef(false);
@@ -132,6 +141,14 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       viewRef.current = v;
       messagesRef.current = m;
       setView(v);
+      if (v.completed && !previous?.completed) {
+        recordNightLogEntry({
+          route: v.storyRoute,
+          decision: v.finalDecision ?? "",
+          flags: v.flagsOutcome,
+          at: new Date().toISOString(),
+        });
+      }
       if (previous?.chapter === 2 && v.chapter === 2) {
         const previews: Partial<Record<ContactId, string>> = {
           mike_sk8: "Daniel's computer just appeared online. Don't close MSN.",
@@ -212,26 +229,15 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
   const beep = useCallback(
     (kind = "message") => {
       if (!sound || volume <= 0) return;
-      try {
-        audioCtx.current ??= new AudioContext();
-        const ctx = audioCtx.current;
-        const o = ctx.createOscillator(),
-          g = ctx.createGain();
-        o.type = kind === "error" ? "square" : "sine";
-        o.frequency.value =
-          kind === "invite"
-            ? 660
+      const mapped =
+        kind === "error"
+          ? "error"
+          : kind === "invite"
+            ? "invite"
             : kind === "transfer"
-              ? 520
-              : kind === "error"
-                ? 180
-                : 880;
-        g.gain.setValueAtTime(0.035 * volume, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-        o.connect(g).connect(ctx.destination);
-        o.start();
-        o.stop(ctx.currentTime + 0.19);
-      } catch {}
+              ? "transfer"
+              : "message";
+      playXpSound(mapped);
     },
     [sound, volume],
   );
@@ -244,7 +250,81 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
           setFileTransfer(true);
           beep("transfer");
         }
+        if (a.type === "SHOW_GAME_INVITE") beep("invite");
+        if (a.type === "OPEN_GAME") {
+          beep("message");
+          openApp("game", "Minesweeper Flags");
+        }
+        if (a.type === "OPEN_PINBALL")
+          openApp("pinball", "3D Pinball for Windows - Space Cadet");
+        if (a.type === "OPEN_RECOVERED_VIDEO")
+          openApp("media-player", "emily_goodbye.wmv.partial");
         if (a.type === "PLAY_SOUND") beep(a.payload);
+        if (a.type === "GLITCH_EMILY_AVATAR") {
+          document.documentElement.classList.add("brb-avatar-glitch");
+          window.setTimeout(
+            () => document.documentElement.classList.remove("brb-avatar-glitch"),
+            500,
+          );
+        }
+        if (a.type === "RUN_DESKTOP_TAKEOVER") {
+          const desktop = useDesktopStore.getState();
+          for (const window of Object.values(desktop.windows)) {
+            if (!["msn-chat", "msn-contacts"].includes(window.app))
+              desktop.minimizeWindow(window.id);
+          }
+          window.setTimeout(() => {
+            openApp("playlist", "WINAMP — external stream", {
+              content: "#EXTM3U\n01. external stream — --:--",
+            });
+            openApp("notepad", "I SAID BRB - Notepad", {
+              content: "I SAID BRB",
+            });
+            const current = useDesktopStore.getState();
+            if (current.windows["msn-chat"])
+              current.updateWindow("msn-chat", {
+                title: `${a.payload || "unknown_visitor"} - Conversation`,
+              });
+          }, 700);
+          window.setTimeout(() => {
+            const current = useDesktopStore.getState();
+            if (current.windows["msn-chat"])
+              current.updateWindow("msn-chat", {
+                title: "sleepless_17 - Conversation",
+              });
+          }, 9000);
+        }
+        if (a.type === "RESTORE_POST_ENDING_CONTROL") {
+          const ending = viewRef.current?.finalDecision;
+          const desktop = useDesktopStore.getState();
+          if (ending === "quarantine") {
+            for (const item of Object.values(desktop.windows)) {
+              if (item.app === "playlist")
+                desktop.closeWindow(item.id);
+            }
+          }
+          if (ending === "release") {
+            window.setTimeout(() => {
+              openApp("msn-contacts", "MSN Messenger");
+              const current = useDesktopStore.getState();
+              current.openWindow({
+                id: "messenger-service",
+                app: "msn-contacts",
+                title: "Messenger Service",
+                x: 370,
+                y: 86,
+                width: 300,
+                height: 565,
+                resizable: false,
+              });
+            }, 9000);
+          }
+          if (ending === "erase") {
+            for (const item of Object.values(desktop.windows)) {
+              if (["playlist", "media-player"].includes(item.app)) desktop.closeWindow(item.id);
+            }
+          }
+        }
       }
     },
     [beep],
@@ -267,13 +347,16 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
         const item = items[i];
         if (item.sender !== "system") {
           setTyping(true);
+          setTypingContactId(item.contactId);
           await new Promise((r) =>
             setTimeout(
               r,
               Math.min(1600, typingDuration(item.text, item.delivery, i + 1)),
             ),
           );
+
           setTyping(false);
+          setTypingContactId(null);
         }
         append([item]);
         if (item.sender !== "system") {
@@ -297,7 +380,10 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
     async (event: NarrativeEvent) => {
       if (!envelopeRef.current) return;
       setBusy(true);
-      if (event.type === "USER_MESSAGES") setTyping(true);
+      if (event.type === "USER_MESSAGES") {
+        setTyping(true);
+        setTypingContactId(viewRef.current?.activeContact ?? "sleepless_17");
+      }
       try {
         let pending: NarrativeEvent | null = event;
         while (pending) {
@@ -324,6 +410,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
             webcamLock.current = false;
             setReactorStart(false);
             setWebcamScript(data.webcamPreparation.spokenScript);
+            setWebcamPerformanceNotes(data.webcamPreparation.performanceNotes);
             const tokenResponse = await fetch("/api/reactor/token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -362,6 +449,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       } finally {
         setBusy(false);
         setTyping(false);
+        setTypingContactId(null);
       }
     },
     [append, applyActions, deliver, persist],
@@ -381,10 +469,6 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       const name = notification.contactId;
       openApp("msn-chat", `${name} - Conversation`, {
         contactId: notification.contactId,
-      });
-      useDesktopStore.getState().updateWindow("msn-chat", {
-        title: `${name} - Conversation`,
-        payload: { contactId: notification.contactId },
       });
       if (viewRef.current?.chapter === 2)
         await sendEvent({
@@ -454,9 +538,6 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       "msn-video",
       `Video Conversation — ${viewRef.current?.activeContact ?? "sleepless_17"}`,
     );
-    useDesktopStore.getState().updateWindow("msn-video", {
-      title: `Video Conversation — ${viewRef.current?.activeContact ?? "sleepless_17"}`,
-    });
     if (reactorMode === "live") setReactorStart(true);
     else
       setTimeout(() => {
@@ -499,6 +580,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       view,
       messages,
       typing,
+      typingContactId,
       busy,
       sessionError,
       invite,
@@ -510,6 +592,7 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       webcamPlaying,
       webcamScript,
       webcamStream,
+      reactorMode,
       sound,
       volume,
       notifications,
@@ -539,12 +622,14 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
       openFile,
       openNotification,
       ready,
+      reactorMode,
       reset,
       sendEvent,
       sessionError,
       setVolume,
       sound,
       typing,
+      typingContactId,
       view,
       volume,
       webcamPlaying,
@@ -569,6 +654,10 @@ export function NarrativeProvider({ children }: { children: ReactNode }) {
                   ? "/assets/avatars/tom_d-v2.jpg"
                   : "/assets/avatars/sleepless_17.webp"
           }
+          performancePrompt={performancePromptFor(
+            view?.activeContact ?? "sleepless_17",
+            webcamPerformanceNotes,
+          )}
           startRequested={reactorStart}
           onReady={() => void sendEvent({ type: "LTX_CONDITIONS_READY" })}
           onComplete={() => {

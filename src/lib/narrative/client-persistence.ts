@@ -9,8 +9,10 @@ export function isCurrentSavedSession(value:SavedSession|null):value is SavedSes
 }
 export function normalizeSavedPublicView(view:unknown):PublicView{
  const value=view as PublicView;
- if(value.chapter)return value;
- return {...value,chapter:1,activeContact:'sleepless_17',chapterTwoStage:'locked',contactStatuses:{sleepless_17:value.online?'online':'offline',mike_sk8:'offline',sarahlou_x:'offline',tom_d:'offline'},fileTransferDecision:'pending',exposureStage:0,knownEvidence:[],completedContacts:[],finalDecision:null,fileOfferDescription:''};
+ const gameDefaults={flagsStatus:(value.flagsStatus??'hidden') as PublicView['flagsStatus'],flagsOutcome:(value.flagsOutcome??'pending') as PublicView['flagsOutcome'],flagsRound:value.flagsRound??0,typingTestStatus:(value.typingTestStatus??'hidden') as PublicView['typingTestStatus'],pinballViews:value.pinballViews??0};
+ const reactiveDefaults={reactiveStage:value.reactiveStage??0,recycleArtifact:value.recycleArtifact??'hidden',memoryDecision:value.memoryDecision??'pending',movingNoteMutated:value.movingNoteMutated??false,recoveredVideoAvailable:value.recoveredVideoAvailable??false,recoveredVideoCompleted:value.recoveredVideoCompleted??false,possessionMode:value.possessionMode??'idle',resistShutdown:value.resistShutdown??false,emilyAvatarVariant:value.emilyAvatarVariant??'normal'} as const;
+ if(value.chapter)return {...value,emilySuspicion:value.emilySuspicion??0,...gameDefaults,...reactiveDefaults};
+ return {...value,chapter:1,activeContact:'sleepless_17',chapterTwoStage:'locked',contactStatuses:{sleepless_17:value.online?'online':'offline',mike_sk8:'offline',sarahlou_x:'offline',tom_d:'offline'},fileTransferDecision:'pending',exposureStage:0,knownEvidence:[],completedContacts:[],finalDecision:null,fileOfferDescription:'',emilySuspicion:0,...gameDefaults,...reactiveDefaults};
 }
 export function normalizeSavedMessages(messages:unknown[]):DeliveredMessage[]{
  return messages.map(item=>{const message=item as DeliveredMessage;return {...message,contactId:message.contactId??'sleepless_17'};});

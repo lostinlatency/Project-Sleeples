@@ -78,6 +78,40 @@ export const NarrativeEventSchema = z.discriminatedUnion("type", [
     type: z.literal("CHAPTER_TWO_FINAL_DECISION"),
     decision: z.enum(["quarantine", "release", "erase"]),
   }),
+  z.object({ type: z.literal("GAME_INVITE_REQUESTED") }),
+  z.object({ type: z.literal("GAME_INVITE_ACCEPTED") }),
+  z.object({ type: z.literal("GAME_INVITE_DECLINED") }),
+  z.object({
+    type: z.literal("GAME_RESULT"),
+    outcome: z.enum(["won", "lost", "quit"]),
+    visitorMines: z.number().int().min(0).max(51),
+    emilyMines: z.number().int().min(0).max(51),
+    turns: z.number().int().min(0).max(400),
+  }),
+  z.object({
+    type: z.literal("TYPING_TEST_SUBMITTED"),
+    text: z.string().trim().min(1).max(200),
+  }),
+  z.object({ type: z.literal("TYPING_TEST_SKIPPED") }),
+  z.object({ type: z.literal("PINBALL_OPENED") }),
+  z.object({ type: z.literal("APP_OPENED"), appId: z.string().min(1).max(80) }),
+  z.object({
+    type: z.literal("PLAYLIST_TRACK_PLAYED"),
+    trackId: z.literal("missing_goodbye"),
+  }),
+  z.object({
+    type: z.literal("RECYCLE_ARTIFACT_DECIDED"),
+    decision: z.enum(["restore", "delete"]),
+  }),
+  z.object({ type: z.literal("RECOVERED_VIDEO_COMPLETED") }),
+  z.object({
+    type: z.literal("MEMORY_FILE_DECIDED"),
+    decision: z.enum(["send", "delete", "keep"]),
+  }),
+  z.object({
+    type: z.literal("POWER_ACTION_ATTEMPTED"),
+    action: z.enum(["shutdown", "restart"]),
+  }),
 ]);
 export type NarrativeEvent = z.infer<typeof NarrativeEventSchema>;
 
@@ -122,8 +156,101 @@ export const ChapterTwoSchema = z.object({
 });
 export type ChapterTwoState = z.infer<typeof ChapterTwoSchema>;
 
+export const FlagsGameSchema = z
+  .object({
+    status: z.enum(["hidden", "offered", "playing", "done"]).default("hidden"),
+    outcome: z
+      .enum(["pending", "visitor_won", "visitor_lost", "visitor_quit"])
+      .default("pending"),
+    visitorMines: z.number().int().min(0).max(51).default(0),
+    emilyMines: z.number().int().min(0).max(51).default(0),
+    turns: z.number().int().min(0).max(400).default(0),
+    round: z.number().int().min(0).default(0),
+  })
+  .default({
+    status: "hidden",
+    outcome: "pending",
+    visitorMines: 0,
+    emilyMines: 0,
+    turns: 0,
+    round: 0,
+  });
+export type FlagsGameState = z.infer<typeof FlagsGameSchema>;
+
+export const TypingTestSchema = z
+  .object({
+    status: z.enum(["hidden", "offered", "submitted", "skipped"]).default(
+      "hidden",
+    ),
+    score: z.number().int().min(-12).max(12).default(0),
+  })
+  .default({ status: "hidden", score: 0 });
+export type TypingTestState = z.infer<typeof TypingTestSchema>;
+
+export const PinballSchema = z
+  .object({ views: z.number().int().min(0).max(5).default(0) })
+  .default({ views: 0 });
+
+export const ReactiveDesktopSchema = z.object({
+  stage: z.number().int().min(0).max(5).default(0),
+  playlistTrackPlayed: z.boolean().default(false),
+  movingNoteMutated: z.boolean().default(false),
+  recycleArtifact: z
+    .enum(["hidden", "available", "restored", "deleted", "residual"])
+    .default("hidden"),
+  recoveredVideoOpened: z.boolean().default(false),
+  recoveredVideoCompleted: z.boolean().default(false),
+  memoryDecision: z
+    .enum([
+      "pending",
+      "sent",
+      "deleted",
+      "kept",
+      "kept_twice",
+      "residual_deleted",
+    ])
+    .default("pending"),
+  observedBehavior: z.string().nullable().default(null),
+  observationRevealed: z.boolean().default(false),
+  blockedShutdown: z.boolean().default(false),
+  blockedLogout: z.boolean().default(false),
+  takeoverCompleted: z.boolean().default(false),
+}).default({
+  stage: 0,
+  playlistTrackPlayed: false,
+  movingNoteMutated: false,
+  recycleArtifact: "hidden",
+  recoveredVideoOpened: false,
+  recoveredVideoCompleted: false,
+  memoryDecision: "pending",
+  observedBehavior: null,
+  observationRevealed: false,
+  blockedShutdown: false,
+  blockedLogout: false,
+  takeoverCompleted: false,
+});
+export type ReactiveDesktopState = z.infer<typeof ReactiveDesktopSchema>;
+
+export const PlayerBehaviorSchema = z.object({
+  firstOpenedApp: z.string().nullable().default(null),
+  fileOpenCounts: z.record(z.string(), z.number().int().min(0).max(10)).default({}),
+  openedBeachPhotoBeforeEmilyAnswer: z.boolean().default(false),
+  shutdownAttempts: z.number().int().min(0).max(10).default(0),
+  logoutAttempts: z.number().int().min(0).max(10).default(0),
+  restoredArtifact: z.boolean().default(false),
+  deletedArtifact: z.boolean().default(false),
+}).default({
+  firstOpenedApp: null,
+  fileOpenCounts: {},
+  openedBeachPhotoBeforeEmilyAnswer: false,
+  shutdownAttempts: 0,
+  logoutAttempts: 0,
+  restoredArtifact: false,
+  deletedArtifact: false,
+});
+
 export const StateSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   chapter: z.union([z.literal(1), z.literal(2)]),
   sessionId: z.string(),
   turn: z.number().int().nonnegative(),
@@ -150,6 +277,7 @@ export const StateSchema = z.object({
   unlockedFiles: z.array(z.string()),
   requestedObjectId: z.string().nullable(),
   ignoredRequests: z.number().int().nonnegative(),
+  notices: z.array(z.string()).default([]),
   idlePromptCount: z.number().int().min(0).max(5).default(0),
   temporarilyOffline: z.boolean().default(false),
   routeFlags: z.object({
@@ -184,6 +312,11 @@ export const StateSchema = z.object({
   msnOpened: z.boolean(),
   firstMessageSent: z.boolean(),
   chapterTwo: ChapterTwoSchema,
+  flagsGame: FlagsGameSchema,
+  typingTest: TypingTestSchema,
+  pinball: PinballSchema,
+  reactiveDesktop: ReactiveDesktopSchema,
+  playerBehavior: PlayerBehaviorSchema,
 });
 export type NarrativeState = z.infer<typeof StateSchema>;
 
@@ -194,16 +327,26 @@ export interface DeliveredMessage {
   text: string;
   delivery: "casual" | "quick" | "hesitant" | "hurt" | "direct" | "nervous";
 }
-export type UiAction = {
-  type:
+export type UiAction =
+  | {
+      type:
     | "OPEN_CONVERSATION"
     | "PLAY_SOUND"
     | "SHOW_WEBCAM_INVITE"
     | "SHOW_FILE_TRANSFER"
+    | "SHOW_GAME_INVITE"
+    | "OPEN_GAME"
+    | "SHOW_TYPING_TEST"
+      | "OPEN_PINBALL"
+      | "OPEN_RECOVERED_VIDEO"
     | "SET_OFFLINE"
-    | "DISABLE_INPUT";
-  payload?: string;
-};
+      | "DISABLE_INPUT";
+      payload?: string;
+    }
+  | { type: "GLITCH_EMILY_AVATAR" }
+  | { type: "RUN_DESKTOP_TAKEOVER"; payload: string }
+  | { type: "RESIST_SHUTDOWN" }
+  | { type: "RESTORE_POST_ENDING_CONTROL" };
 export interface PublicView {
   sessionId: string;
   turn: number;
@@ -232,13 +375,27 @@ export interface PublicView {
   completedContacts: ContactId[];
   finalDecision: ChapterTwoState["finalDecision"];
   fileOfferDescription: string;
+  emilySuspicion: number;
+  flagsStatus: FlagsGameState["status"];
+  flagsOutcome: FlagsGameState["outcome"];
+  flagsRound: number;
+  typingTestStatus: TypingTestState["status"];
+  pinballViews: number;
+  reactiveStage: number;
+  recycleArtifact: ReactiveDesktopState["recycleArtifact"];
+  memoryDecision: ReactiveDesktopState["memoryDecision"];
+  movingNoteMutated: boolean;
+  recoveredVideoAvailable: boolean;
+  recoveredVideoCompleted: boolean;
+  possessionMode: "idle" | "watching" | "interfering" | "controlling" | "finale";
+  resistShutdown: boolean;
+  emilyAvatarVariant: "normal" | "recovered" | "unknown";
 }
 export interface DirectorResult {
   nextState: NarrativeState;
   authoredMessages: DeliveredMessage[];
   uiActions: UiAction[];
   shouldPrepareWebcam: boolean;
-  actorObjective: string | null;
 }
 
 export function publicView(state: NarrativeState): PublicView {
@@ -271,6 +428,9 @@ export function publicView(state: NarrativeState): PublicView {
     chapterTwoStage: state.chapterTwo.stage,
     contactStatuses: {
       sleepless_17:
+        state.chapterTwo.finalDecision === "release"
+          ? "online"
+          :
         state.chapter === 1
           ? !state.temporarilyOffline &&
             !["disconnection", "complete"].includes(state.phase)
@@ -281,6 +441,9 @@ export function publicView(state: NarrativeState): PublicView {
             ? "online"
             : "offline",
       mike_sk8:
+        state.chapterTwo.finalDecision === "release"
+          ? "online"
+          :
         state.chapter === 2 &&
         ["interviews", "convergence", "final"].includes(
           state.chapterTwo.stage,
@@ -289,11 +452,17 @@ export function publicView(state: NarrativeState): PublicView {
           ? "online"
           : "offline",
       sarahlou_x:
+        state.chapterTwo.finalDecision === "release"
+          ? "online"
+          :
         state.chapterTwo.completedContacts.includes("mike_sk8") &&
         !state.chapterTwo.completedContacts.includes("sarahlou_x")
           ? "online"
           : "offline",
       tom_d:
+        state.chapterTwo.finalDecision === "release"
+          ? "online"
+          :
         state.chapterTwo.completedContacts.includes("mike_sk8") &&
         !state.chapterTwo.completedContacts.includes("tom_d")
           ? "online"
@@ -319,5 +488,45 @@ export function publicView(state: NarrativeState): PublicView {
               ] ?? "unknown"
             }`
           : "",
+    emilySuspicion: emilySuspicion(state),
+    flagsStatus: state.flagsGame.status,
+    flagsOutcome: state.flagsGame.outcome,
+    flagsRound: state.flagsGame.round,
+    typingTestStatus: state.typingTest.status,
+    pinballViews: state.pinball.views,
+    reactiveStage: state.reactiveDesktop.stage,
+    recycleArtifact: state.reactiveDesktop.recycleArtifact,
+    memoryDecision: state.reactiveDesktop.memoryDecision,
+    movingNoteMutated: state.reactiveDesktop.movingNoteMutated,
+    recoveredVideoAvailable:
+      state.reactiveDesktop.recycleArtifact === "restored" &&
+      !["sent", "deleted"].includes(state.reactiveDesktop.memoryDecision),
+    recoveredVideoCompleted: state.reactiveDesktop.recoveredVideoCompleted,
+    possessionMode:
+      state.reactiveDesktop.stage >= 5
+        ? "finale"
+        : state.reactiveDesktop.stage >= 4
+          ? "controlling"
+          : state.reactiveDesktop.stage >= 2
+            ? "interfering"
+            : state.reactiveDesktop.stage >= 1
+              ? "watching"
+              : "idle",
+    resistShutdown:
+      state.chapter === 2 &&
+      (state.chapterTwo.exposureStage >= 4 || state.chapterTwo.stage === "convergence") &&
+      !state.reactiveDesktop.blockedShutdown,
+    emilyAvatarVariant:
+      state.chapterTwo.finalDecision === "release"
+        ? "unknown"
+        : state.reactiveDesktop.recycleArtifact === "restored"
+          ? "recovered"
+          : "normal",
   };
+}
+
+export function emilySuspicion(state: Pick<NarrativeState, "beliefs">) {
+  const raw =
+    (1 - state.beliefs.userIsDaniel) * 0.7 + (1 - state.beliefs.trust) * 0.3;
+  return Math.round(Math.min(1, Math.max(0, raw)) * 100) / 100;
 }

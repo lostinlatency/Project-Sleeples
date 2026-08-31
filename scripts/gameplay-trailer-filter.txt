@@ -1,0 +1,16 @@
+[3:v]trim=duration=2.5,setpts=PTS-STARTPTS,scale=1920:1080,fade=t=in:st=0:d=0.5,fade=t=out:st=2:d=0.5,format=yuv420p[intro];
+[0:v]trim=start=0.15:end=8.45,setpts=PTS-STARTPTS,scale=1920:1080,fps=30,zoompan=z='min(zoom+0.00042,1.085)':x='max(0,min(iw-iw/zoom,1320-iw/(2*zoom)))':y='max(0,min(ih-ih/zoom,470-ih/(2*zoom)))':d=1:s=1920x1080:fps=30,format=yuv420p[hook];
+[4:v]trim=duration=1.7,setpts=PTS-STARTPTS,scale=1920:1080,fade=t=in:st=0:d=0.35,fade=t=out:st=1.35:d=0.35,format=yuv420p[card1];
+[1:v]trim=start=0.25:end=32.75,setpts=PTS-STARTPTS,scale=1920:1080,fps=30,zoompan=z='min(zoom+0.00012,1.12)':x='max(0,min(iw-iw/zoom,900-iw/(2*zoom)))':y='max(0,min(ih-ih/zoom,460-ih/(2*zoom)))':d=1:s=1920x1080:fps=30,format=yuv420p[discovery];
+[5:v]trim=duration=1.7,setpts=PTS-STARTPTS,scale=1920:1080,fade=t=in:st=0:d=0.35,fade=t=out:st=1.35:d=0.35,format=yuv420p[card2];
+[2:v]trim=start=0.25:end=12,setpts=PTS-STARTPTS,scale=1920:1080,fps=30,zoompan=z='min(zoom+0.0005,1.14)':x='max(0,min(iw-iw/zoom,650-iw/(2*zoom)))':y='max(0,min(ih-ih/zoom,520-ih/(2*zoom)))':d=1:s=1920x1080:fps=30,format=yuv420p[choice];
+[6:v]trim=duration=3.8,setpts=PTS-STARTPTS,scale=1920:1080,fade=t=in:st=0:d=0.55,fade=t=out:st=3.25:d=0.55,format=yuv420p[end];
+[intro][hook][card1][discovery][card2][choice][end]concat=n=7:v=1:a=0,fps=30,format=yuv420p[vout];
+aevalsrc='0.026*sin(2*PI*49*t)+0.018*sin(2*PI*73.5*t)+0.008*sin(2*PI*98*t)':s=48000:d=62.25,lowpass=f=430,afade=t=in:st=0:d=2,afade=t=out:st=59.8:d=2.45[drone];
+anoisesrc=color=pink:duration=62.25:sample_rate=48000,lowpass=f=850,highpass=f=80,volume=0.012,afade=t=in:st=0:d=3,afade=t=out:st=60:d=2.25[air];
+sine=frequency=880:sample_rate=48000:duration=0.14,volume=.06,adelay=2500|2500[b1];
+sine=frequency=660:sample_rate=48000:duration=0.18,volume=.055,adelay=10800|10800[b2];
+sine=frequency=110:sample_rate=48000:duration=0.8,volume=.10,afade=t=out:st=0.05:d=0.75,adelay=12500|12500[hit1];
+sine=frequency=96:sample_rate=48000:duration=1.1,volume=.11,afade=t=out:st=0.08:d=1.02,adelay=46700|46700[hit2];
+sine=frequency=55:sample_rate=48000:duration=2.4,volume=.14,afade=t=out:st=0.25:d=2.15,adelay=58400|58400[finalhit];
+[drone][air][b1][b2][hit1][hit2][finalhit]amix=inputs=7:normalize=0,volume=4,alimiter=limit=.8,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]
